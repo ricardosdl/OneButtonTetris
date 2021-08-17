@@ -50,7 +50,7 @@ Structure TFallingPiece
   Type.a
   Configuration.a
   Array Pieces.u(#Piece_Size - 1, #Piece_Size - 1)
-  
+  FallingTimer.f
 EndStructure
 
 
@@ -224,6 +224,20 @@ Procedure Draw()
   StopDrawing()
 EndProcedure
 
+Procedure UpdateFallingPiece(Elapsed.f)
+  FallingPiece\FallingTimer + Elapsed
+  If FallingPiece\FallingTimer >= 0.2
+    ;fall down one line
+    FallingPiece\PosY + 1
+    FallingPiece\FallingTimer = 0.0
+  EndIf
+  
+EndProcedure
+
+
+Procedure Update(Elapsed.f)
+  UpdateFallingPiece(Elapsed)
+EndProcedure
 
 
 
@@ -237,7 +251,7 @@ OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One Button Tetris", #PB_Window_Scr
 OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
 
 FallingPiece\PosX = 9
-FallingPiece\PosY = 15
+FallingPiece\PosY = 0
 FallingPiece\Type = #LeftL
 FallingPiece\Configuration = 1
 
@@ -250,6 +264,7 @@ Repeat
   Global event = WindowEvent()
   
   ;Update
+  Update(ElapsedTimneInS)
   
   ;Draw
   ClearScreen(#Black)
