@@ -62,7 +62,7 @@ EndStructure
 Global ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
 Global PlayField.TPlayField, FallingPiece.TFallingPiece
-Global NewMap PiecesConfiguration.TPieceConfiguration()
+Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
 
 ;Reads a list of integers separated by Separator and put them on IntegerList()
 ;no check is performed for valid integers in StringList
@@ -115,33 +115,33 @@ Procedure LoadPiecesTemplate()
 EndProcedure
 
 Procedure LoadPiecesConfigurations()
-  PiecesConfiguration(Str(#Line))\PieceType = #Line
-  PiecesConfiguration(Str(#Line))\NumConfigurations = 2
-  StringListToAsciiList("0,1", PiecesConfiguration(Str(#Line))\PieceTemplates())
+  PiecesConfiguration(#Line)\PieceType = #Line
+  PiecesConfiguration(#Line)\NumConfigurations = 2
+  StringListToAsciiList("0,1", PiecesConfiguration(#Line)\PieceTemplates())
   
-  PiecesConfiguration(Str(#Square))\PieceType = #Square
-  PiecesConfiguration(Str(#Square))\NumConfigurations = 1
-  StringListToAsciiList("2", PiecesConfiguration(Str(#Square))\PieceTemplates())
+  PiecesConfiguration(#Square)\PieceType = #Square
+  PiecesConfiguration(#Square)\NumConfigurations = 1
+  StringListToAsciiList("2", PiecesConfiguration(#Square)\PieceTemplates())
   
-  PiecesConfiguration(Str(#LeftL))\PieceType = #LeftL
-  PiecesConfiguration(Str(#LeftL))\NumConfigurations = 4
-  StringListToAsciiList("3,4,5,6", PiecesConfiguration(Str(#LeftL))\PieceTemplates())
+  PiecesConfiguration(#LeftL)\PieceType = #LeftL
+  PiecesConfiguration(#LeftL)\NumConfigurations = 4
+  StringListToAsciiList("3,4,5,6", PiecesConfiguration(#LeftL)\PieceTemplates())
   
-  PiecesConfiguration(Str(#RightL))\PieceType = #RightL
-  PiecesConfiguration(Str(#RightL))\NumConfigurations = 4
-  StringListToAsciiList("7,8,9,10", PiecesConfiguration(Str(#RightL))\PieceTemplates())
+  PiecesConfiguration(#RightL)\PieceType = #RightL
+  PiecesConfiguration(#RightL)\NumConfigurations = 4
+  StringListToAsciiList("7,8,9,10", PiecesConfiguration(#RightL)\PieceTemplates())
   
-  PiecesConfiguration(Str(#Left4))\PieceType = #Left4
-  PiecesConfiguration(Str(#Left4))\NumConfigurations = 2
-  StringListToAsciiList("11,12", PiecesConfiguration(Str(#Left4))\PieceTemplates())
+  PiecesConfiguration(#Left4)\PieceType = #Left4
+  PiecesConfiguration(#Left4)\NumConfigurations = 2
+  StringListToAsciiList("11,12", PiecesConfiguration(#Left4)\PieceTemplates())
   
-  PiecesConfiguration(Str(#Tee))\PieceType = #Tee
-  PiecesConfiguration(Str(#Tee))\NumConfigurations = 4
-  StringListToAsciiList("13,14,15,16", PiecesConfiguration(Str(#Tee))\PieceTemplates())
+  PiecesConfiguration(#Tee)\PieceType = #Tee
+  PiecesConfiguration(#Tee)\NumConfigurations = 4
+  StringListToAsciiList("13,14,15,16", PiecesConfiguration(#Tee)\PieceTemplates())
   
-  PiecesConfiguration(Str(#Right4))\PieceType = #Right4
-  PiecesConfiguration(Str(#Right4))\NumConfigurations = 2
-  StringListToAsciiList("17,18", PiecesConfiguration(Str(#Right4))\PieceTemplates())
+  PiecesConfiguration(#Right4)\PieceType = #Right4
+  PiecesConfiguration(#Right4)\NumConfigurations = 2
+  StringListToAsciiList("17,18", PiecesConfiguration(#Right4)\PieceTemplates())
   
   
   
@@ -176,7 +176,7 @@ Procedure DrawFallingPiece()
   Protected PieceType.a = FallingPiece\Type
   Protected PiecesConfiguration.a = FallingPiece\Configuration
   
-  Protected NumConfigurations.a = PiecesConfiguration(Str(PieceType))\NumConfigurations
+  Protected NumConfigurations.a = PiecesConfiguration(PieceType)\NumConfigurations
   
   Static Timer = 0
   Timer + 16
@@ -186,9 +186,9 @@ Procedure DrawFallingPiece()
   EndIf
   
   
-  FirstElement(PiecesConfiguration(Str(PieceType))\PieceTemplates())
+  FirstElement(PiecesConfiguration(PieceType)\PieceTemplates())
   
-  Protected FirstConfiguration.a = PiecesConfiguration(Str(PieceType))\PieceTemplates()
+  Protected FirstConfiguration.a = PiecesConfiguration(PieceType)\PieceTemplates()
   
   Protected PieceTemplateIdx.a = FirstConfiguration + (FallingPiece\Configuration % NumConfigurations)
   
@@ -238,7 +238,7 @@ OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
 
 FallingPiece\PosX = 9
 FallingPiece\PosY = 15
-FallingPiece\Type = #Right4
+FallingPiece\Type = #LeftL
 FallingPiece\Configuration = 1
 
 LastTimeInMs = ElapsedMilliseconds()
