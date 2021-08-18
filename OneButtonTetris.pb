@@ -51,6 +51,7 @@ Structure TFallingPiece
   Configuration.a
   Array Pieces.u(#Piece_Size - 1, #Piece_Size - 1)
   FallingTimer.f
+  IsFalling.a
 EndStructure
 
 
@@ -77,6 +78,18 @@ Procedure StringListToAsciiList(StringList.s, List AsciiList.a(), Separator.s = 
     AsciiList() = Val(StringField(StringList, i, Separator))
   Next i
 EndProcedure
+
+Procedure InitPlayField()
+  Protected.u x, y
+  For x = 0 To #PlayFieldSize_Width - 1
+    For y = 0 To #PlayFieldSize_Height - 1
+      PlayField\PlayField(x, y) = #Empty
+    Next y
+    
+  Next x
+  
+EndProcedure
+
 
 Procedure SavePieceTemplate(List PieceLines.s(), CurrentPieceTemplate.a)
   Protected PieceTemplateLine.a = 0
@@ -111,7 +124,7 @@ Procedure LoadPiecesTemplate()
     AddElement(PiecesLines())
     PiecesLines() = Line
   Wend
-  
+  CloseFile(0)
 EndProcedure
 
 Procedure LoadPiecesConfigurations()
@@ -147,7 +160,16 @@ Procedure LoadPiecesConfigurations()
   
 EndProcedure
 
-
+Procedure.a GetPieceTemplateIdx(PieceType.a, Configuration.a)
+  Protected NumConfigurations.a = PiecesConfiguration(PieceType)\NumConfigurations
+  
+  FirstElement(PiecesConfiguration(PieceType)\PieceTemplates())
+  
+  Protected FirstConfiguration.a = PiecesConfiguration(PieceType)\PieceTemplates()
+  
+  ProcedureReturn FirstConfiguration + (Configuration % NumConfigurations)
+  
+EndProcedure
 
 Procedure.q GetPieceColor(PieceInfo.u)
   If PieceInfo & #RedColor
@@ -174,16 +196,8 @@ Procedure DrawFallingPiece()
   Protected x.w = FallingPiece\PosX
   Protected y.w = FallingPiece\PosY
   Protected PieceType.a = FallingPiece\Type
-  Protected PiecesConfiguration.a = FallingPiece\Configuration
   
   Protected NumConfigurations.a = PiecesConfiguration(PieceType)\NumConfigurations
-  
-  Static Timer = 0
-  Timer + 16
-  If Timer > 500
-    FallingPiece\Configuration = (FallingPiece\Configuration + 1) % NumConfigurations
-    Timer = 0
-  EndIf
   
   
   FirstElement(PiecesConfiguration(PieceType)\PieceTemplates())
@@ -213,6 +227,10 @@ Procedure Draw()
   StartDrawing(ScreenOutput())
   For x = 0 To #PlayFieldSize_Width - 1
     For y = 0 To #PlayFieldSize_Height - 1
+      If ~(PlayField\PlayField(x, y) & #Filled)
+        Continue
+      EndIf
+      
       Protected PieceInfo.u = PlayField\PlayField(x, y)
       Protected PieceColor = GetPieceColor(PieceInfo)
       Box(x * #Piece_Width, y * #Piece_Height, #Piece_Width - 1, #Piece_Height - 1, PieceColor)
@@ -224,13 +242,69 @@ Procedure Draw()
   StopDrawing()
 EndProcedure
 
+Procedure SaveFallingPieceOnPlayField()
+  Protected PieceTemplateIdx.a = GetPieceTemplateIdx(FallingPiece\Type, FallingPiece\Configuration)
+  Protected i.u, j.u
+  For i = 0 To #Piece_Size - 1
+    For j = 0 To #Piece_Size - 1
+      If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j)
+        Protected XCell.w = FallingPiece\PosX + i
+        Protected YCell.w = FallingPiece\PosY + j
+        PlayField\PlayField(XCell, YCell) = #Filled | #RedColor
+      EndIf
+      
+    Next j
+    
+  Next i
+EndProcedure
+
+
 Procedure UpdateFallingPiece(Elapsed.f)
-  FallingPiece\FallingTimer + Elapsed
-  If FallingPiece\FallingTimer >= 0.2
-    ;fall down one line
-    FallingPiece\PosY + 1
-    FallingPiece\FallingTimer = 0.0
+  ;gets the number of configuration this piecetype has
+  Protected NumConfigurations.a = PiecesConfiguration(FallingPiece\Type)\NumConfigurations
+  
+  ;gets the current template used by the falling piece
+  Protected PieceTemplateIdx.a = GetPieceTemplateIdx(FallingPiece\Type, FallingPiece\Configuration)
+  
+  If KeyboardReleased(#PB_Key_Space)
+    FallingPiece\Configuration = (FallingPiece\Configuration + 1) % NumConfigurations
   EndIf
+  
+  Protected i.u, j.u
+  For i = 0 To #Piece_Size - 1
+    For j = 0 To #Piece_Size - 1
+      If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j)
+        ;Protected XCell.w = FallingPiece\PosX + i
+        Protected YCell.w = FallingPiece\PosY + j
+        If YCell > #PlayFieldSize_Height - 1
+          ;hit bottom of playfield
+          FallingPiece\PosY - 1;put the fallingpiece one line above
+          FallingPiece\IsFalling = #False
+          SaveFallingPieceOnPlayField()
+        EndIf
+        
+        ;Box(100, 100, #Piece_Width - 1, #Piece_Height - 1, RGB($7f, 0, 0))
+      EndIf
+      
+    Next j
+    
+  Next i
+  
+  
+  If FallingPiece\IsFalling
+    
+    FallingPiece\FallingTimer + Elapsed
+    If FallingPiece\FallingTimer >= 0.2
+      ;fall down one line
+      FallingPiece\PosY + 1
+      FallingPiece\FallingTimer = 0.0
+    EndIf
+  EndIf
+  
+  ;check collisions
+  
+  ;check collisions with the bottom
+  ;FallingPiece\
   
 EndProcedure
 
@@ -246,14 +320,16 @@ InitKeyboard()
 
 LoadPiecesTemplate()
 LoadPiecesConfigurations()
+InitPlayField()
 
 OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One Button Tetris", #PB_Window_ScreenCentered)
 OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
 
-FallingPiece\PosX = 9
-FallingPiece\PosY = 0
+FallingPiece\PosX = 0
+FallingPiece\PosY = -3
 FallingPiece\Type = #LeftL
-FallingPiece\Configuration = 1
+FallingPiece\Configuration = 0
+FallingPiece\IsFalling = #True
 
 LastTimeInMs = ElapsedMilliseconds()
 
