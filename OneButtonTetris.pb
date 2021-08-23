@@ -193,6 +193,10 @@ Procedure.q GetPieceColor(PieceInfo.u)
 EndProcedure
 
 Procedure DrawFallingPiece()
+  If Not FallingPiece\IsFalling
+    ProcedureReturn
+  EndIf
+  
   Protected x.w = FallingPiece\PosX
   Protected y.w = FallingPiece\PosY
   Protected PieceType.a = FallingPiece\Type
@@ -227,7 +231,7 @@ Procedure Draw()
   StartDrawing(ScreenOutput())
   For x = 0 To #PlayFieldSize_Width - 1
     For y = 0 To #PlayFieldSize_Height - 1
-      If ~(PlayField\PlayField(x, y) & #Filled)
+      If (PlayField\PlayField(x, y) & #Empty)
         Continue
       EndIf
       
@@ -242,6 +246,11 @@ Procedure Draw()
   StopDrawing()
 EndProcedure
 
+Procedure.a IsCellWithinPlayField(CellX.w, CellY.w)
+  ProcedureReturn Bool((CellX >= 0  And CellX < #PlayFieldSize_Width) And
+                       (CellY >= 0 And CellY < #PlayFieldSize_Height))
+EndProcedure
+
 Procedure SaveFallingPieceOnPlayField()
   Protected PieceTemplateIdx.a = GetPieceTemplateIdx(FallingPiece\Type, FallingPiece\Configuration)
   Protected i.u, j.u
@@ -250,6 +259,10 @@ Procedure SaveFallingPieceOnPlayField()
       If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j)
         Protected XCell.w = FallingPiece\PosX + i
         Protected YCell.w = FallingPiece\PosY + j
+        If Not IsCellWithinPlayField(XCell, YCell)
+          Continue
+        EndIf
+        
         PlayField\PlayField(XCell, YCell) = #Filled | #RedColor
       EndIf
       
@@ -257,6 +270,21 @@ Procedure SaveFallingPieceOnPlayField()
     
   Next i
 EndProcedure
+
+
+Procedure LaunchFallingPiece(Type.a, PosX.w = 0, PosY.w = -3)
+  FallingPiece\PosX = PosX
+  FallingPiece\PosY = PosY
+  FallingPiece\Type = Type
+  FallingPiece\Configuration = 0
+  FallingPiece\IsFalling = #True
+EndProcedure
+
+Procedure LaunchRandomFallingPiece()
+  LaunchFallingPiece(Random(#Right4, #Line))
+EndProcedure
+
+
 
 
 Procedure UpdateFallingPiece(Elapsed.f)
@@ -270,25 +298,61 @@ Procedure UpdateFallingPiece(Elapsed.f)
     FallingPiece\Configuration = (FallingPiece\Configuration + 1) % NumConfigurations
   EndIf
   
+  ;check hit with bottom of playfield
   Protected i.u, j.u
   For i = 0 To #Piece_Size - 1
+    If Not FallingPiece\IsFalling
+      Break
+    EndIf
     For j = 0 To #Piece_Size - 1
       If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j)
-        ;Protected XCell.w = FallingPiece\PosX + i
+        Protected XCell.w = FallingPiece\PosX + i
         Protected YCell.w = FallingPiece\PosY + j
         If YCell > #PlayFieldSize_Height - 1
           ;hit bottom of playfield
           FallingPiece\PosY - 1;put the fallingpiece one line above
           FallingPiece\IsFalling = #False
           SaveFallingPieceOnPlayField()
+          Break
         EndIf
         
-        ;Box(100, 100, #Piece_Width - 1, #Piece_Height - 1, RGB($7f, 0, 0))
+        If Not IsCellWithinPlayField(XCell, YCell)
+          Continue
+        EndIf
+        
+        If PlayField\PlayField(XCell, YCell) & #Filled
+          ;hit with filled cell on playfield
+          FallingPiece\PosY - 1;put the fallingpiece one line above
+          FallingPiece\IsFalling = #False
+          SaveFallingPieceOnPlayField()
+          Break
+        EndIf
+        
+        
+        
+        
+        
+        
+        
+        
+        
+      EndIf
+    Next j
+  Next i
+  
+  ;check hits with the playfield
+  For i = 0 To #PlayFieldSize_Width - 1
+    For j = 0 To #PlayFieldSize_Height - 1
+      If PlayField\PlayField(i, j) & #Empty
+        ;this playfield cell is empty
+        Continue
       EndIf
       
+      
+      
     Next j
-    
   Next i
+  
   
   
   If FallingPiece\IsFalling
@@ -311,6 +375,10 @@ EndProcedure
 
 Procedure Update(Elapsed.f)
   UpdateFallingPiece(Elapsed)
+  If Not FallingPiece\IsFalling
+    LaunchRandomFallingPiece()
+  EndIf
+  
 EndProcedure
 
 
@@ -325,11 +393,7 @@ InitPlayField()
 OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One Button Tetris", #PB_Window_ScreenCentered)
 OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
 
-FallingPiece\PosX = 0
-FallingPiece\PosY = -3
-FallingPiece\Type = #LeftL
-FallingPiece\Configuration = 0
-FallingPiece\IsFalling = #True
+LaunchRandomFallingPiece()
 
 LastTimeInMs = ElapsedMilliseconds()
 
