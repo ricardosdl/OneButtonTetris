@@ -8,6 +8,7 @@
 #Piece_Height = #Piece_Width
 #Piece_Size = 4
 #Piece_Templates = 19
+#Fall_Time = 0.2
 
 EnumerationBinary TPieceInfo
   #Empty
@@ -30,6 +31,13 @@ Enumeration TPieceType
   #Tee
   #Right4
 EndEnumeration
+
+Enumeration TGameState
+  #ChoosingFallingPiece
+  #ChoosingFallingPiecePosition
+  #WaitingFallingPiece
+EndEnumeration
+
 
 Structure TPieceTemplate
   Array PieceTemplate.u(#Piece_Size - 1, #Piece_Size - 1)
@@ -56,6 +64,8 @@ EndStructure
 
 
 Structure TPlayField
+  x.f
+  y.f
   ;stores the tpieceinfo
   Array PlayField.u(#PlayFieldSize_Width - 1, #PlayFieldSize_Height - 1)
 EndStructure
@@ -80,6 +90,8 @@ Procedure StringListToAsciiList(StringList.s, List AsciiList.a(), Separator.s = 
 EndProcedure
 
 Procedure InitPlayField()
+  PlayField\x = 0
+  PlayField\y = 0
   Protected.u x, y
   For x = 0 To #PlayFieldSize_Width - 1
     For y = 0 To #PlayFieldSize_Height - 1
@@ -225,6 +237,13 @@ Procedure DrawFallingPiece()
   
 EndProcedure
 
+Procedure DrawPlayFieldOutline()
+  ;LineXY(PlayField\x + 1, PlayField\y + 1, #PlayFieldSize_Width * #Piece_Width, PlayField\y, RGB($7f, 80, 70))
+  Line(PlayField\x + 1, PlayField\y + 1, #PlayFieldSize_Width * #Piece_Width, 1, RGB($7f, 80, 70))
+  Line(PlayField\x + #PlayFieldSize_Width * #Piece_Width, 1, 1, #PlayFieldSize_Height * #Piece_Height, RGB($7f, 80, 70))
+EndProcedure
+
+
 
 Procedure Draw()
   Protected x.u, y.u
@@ -237,11 +256,13 @@ Procedure Draw()
       
       Protected PieceInfo.u = PlayField\PlayField(x, y)
       Protected PieceColor = GetPieceColor(PieceInfo)
-      Box(x * #Piece_Width, y * #Piece_Height, #Piece_Width - 1, #Piece_Height - 1, PieceColor)
+      Box(PlayField\x + x * #Piece_Width, PlayField\y + y * #Piece_Height, #Piece_Width - 1, #Piece_Height - 1, PieceColor)
     Next y
   Next x
   
   DrawFallingPiece()
+  
+  DrawPlayFieldOutline()
   
   StopDrawing()
 EndProcedure
@@ -358,7 +379,7 @@ Procedure UpdateFallingPiece(Elapsed.f)
   If FallingPiece\IsFalling
     
     FallingPiece\FallingTimer + Elapsed
-    If FallingPiece\FallingTimer >= 0.2
+    If FallingPiece\FallingTimer >= #Fall_Time
       ;fall down one line
       FallingPiece\PosY + 1
       FallingPiece\FallingTimer = 0.0
@@ -375,10 +396,6 @@ EndProcedure
 
 Procedure Update(Elapsed.f)
   UpdateFallingPiece(Elapsed)
-  If Not FallingPiece\IsFalling
-    LaunchRandomFallingPiece()
-  EndIf
-  
 EndProcedure
 
 
@@ -393,9 +410,8 @@ InitPlayField()
 OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One Button Tetris", #PB_Window_ScreenCentered)
 OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
 
-LaunchRandomFallingPiece()
-
 LastTimeInMs = ElapsedMilliseconds()
+;LaunchRandomFallingPiece()
 
 Repeat
   ElapsedTimneInS = (ElapsedMilliseconds() - LastTimeInMs) / 1000.0
