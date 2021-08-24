@@ -68,11 +68,21 @@ Structure TPlayField
   y.f
   ;stores the tpieceinfo
   Array PlayField.u(#PlayFieldSize_Width - 1, #PlayFieldSize_Height - 1)
+  Width.f
+  Height.f
 EndStructure
+
+Structure TFallingPieceWheel
+  x.f
+  y.f
+  PieceType.a
+  CurrentTimer.f
+EndStructure
+
 
 Global ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
-Global PlayField.TPlayField, FallingPiece.TFallingPiece
+Global PlayField.TPlayField, FallingPiece.TFallingPiece, FallingPieceWheel.TFallingPieceWheel
 Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
 
 ;Reads a list of integers separated by Separator and put them on IntegerList()
@@ -99,8 +109,18 @@ Procedure InitPlayField()
     Next y
     
   Next x
+  PlayField\Width = #PlayFieldSize_Width * #Piece_Width
+  PlayField\Height = #PlayFieldSize_Height * #Piece_Height
   
 EndProcedure
+
+Procedure InitFallingPieceWheel()
+  FallingPieceWheel\CurrentTimer = 0
+  FallingPieceWheel\PieceType = Random(#Right4, #Line)
+  FallingPieceWheel\x = PlayField\x + PlayField\Width + 10
+  FallingPieceWheel\y = PlayField\y + PlayField\Height / 2 - (#Piece_Size * #Piece_Height) / 2
+EndProcedure
+
 
 
 Procedure SavePieceTemplate(List PieceLines.s(), CurrentPieceTemplate.a)
@@ -172,12 +192,21 @@ Procedure LoadPiecesConfigurations()
   
 EndProcedure
 
-Procedure.a GetPieceTemplateIdx(PieceType.a, Configuration.a)
-  Protected NumConfigurations.a = PiecesConfiguration(PieceType)\NumConfigurations
-  
+; Procedure.a GetPieceFirstConfiguration(PieceType.a)
+;   FirstElement(PiecesConfiguration(PieceType)\PieceTemplates())
+;   ProcedureReturn PiecesConfiguration(PieceType)\PieceTemplates()
+; EndProcedure
+
+Macro GetPieceFirstConfiguration(PieceType, FirstConfiguration)
   FirstElement(PiecesConfiguration(PieceType)\PieceTemplates())
+  FirstConfiguration = PiecesConfiguration(PieceType)\PieceTemplates()
+EndMacro
+
+Procedure.a GetPieceTemplateIdx(PieceType.a, Configuration.a)
+  Protected FirstConfiguration.a
+  GetPieceFirstConfiguration(PieceType, FirstConfiguration)
   
-  Protected FirstConfiguration.a = PiecesConfiguration(PieceType)\PieceTemplates()
+  Protected NumConfigurations.a = PiecesConfiguration(PieceType)\NumConfigurations
   
   ProcedureReturn FirstConfiguration + (Configuration % NumConfigurations)
   
@@ -213,14 +242,7 @@ Procedure DrawFallingPiece()
   Protected y.w = FallingPiece\PosY
   Protected PieceType.a = FallingPiece\Type
   
-  Protected NumConfigurations.a = PiecesConfiguration(PieceType)\NumConfigurations
-  
-  
-  FirstElement(PiecesConfiguration(PieceType)\PieceTemplates())
-  
-  Protected FirstConfiguration.a = PiecesConfiguration(PieceType)\PieceTemplates()
-  
-  Protected PieceTemplateIdx.a = FirstConfiguration + (FallingPiece\Configuration % NumConfigurations)
+  Protected PieceTemplateIdx.a = GetPieceTemplateIdx(PieceType, FallingPiece\Configuration)
   
   Protected i.u, j.u
   For i = 0 To #Piece_Size - 1
@@ -236,6 +258,28 @@ Procedure DrawFallingPiece()
   
   
 EndProcedure
+
+Procedure DrawFallingPieceWheel()
+  Protected PieceConfiguration.a
+  GetPieceFirstConfiguration(FallingPieceWheel\PieceType, PieceConfiguration)
+  
+  Protected PieceTemplateIdx.a = GetPieceTemplateIdx(FallingPieceWheel\PieceType, PieceConfiguration)
+  
+  Protected i.u, j.u
+  For i = 0 To #Piece_Size - 1
+    For j = 0 To #Piece_Size - 1
+      If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j)
+        Box(FallingPieceWheel\x + i * #Piece_Width, FallingPieceWheel\y + j * #Piece_Height, #Piece_Width - 1, #Piece_Height - 1, RGB($7f, 0, 0))
+      EndIf
+      
+    Next j
+    
+  Next i
+  
+  
+  
+EndProcedure
+
 
 Procedure DrawPlayFieldOutline()
   ;LineXY(PlayField\x + 1, PlayField\y + 1, #PlayFieldSize_Width * #Piece_Width, PlayField\y, RGB($7f, 80, 70))
@@ -263,6 +307,8 @@ Procedure Draw()
   DrawFallingPiece()
   
   DrawPlayFieldOutline()
+  
+  DrawFallingPieceWheel()
   
   StopDrawing()
 EndProcedure
@@ -406,6 +452,7 @@ InitKeyboard()
 LoadPiecesTemplate()
 LoadPiecesConfigurations()
 InitPlayField()
+InitFallingPieceWheel()
 
 OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One Button Tetris", #PB_Window_ScreenCentered)
 OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
