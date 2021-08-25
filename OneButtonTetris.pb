@@ -84,6 +84,7 @@ Global ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
 Global PlayField.TPlayField, FallingPiece.TFallingPiece, FallingPieceWheel.TFallingPieceWheel
 Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
+Global Dim FallingPieceWheelSprites(#Right4)
 
 ;Reads a list of integers separated by Separator and put them on IntegerList()
 ;no check is performed for valid integers in StringList
@@ -113,6 +114,51 @@ Procedure InitPlayField()
   PlayField\Height = #PlayFieldSize_Height * #Piece_Height
   
 EndProcedure
+
+Macro GetPieceFirstConfiguration(PieceType, FirstConfiguration)
+  FirstElement(PiecesConfiguration(PieceType)\PieceTemplates())
+  FirstConfiguration = PiecesConfiguration(PieceType)\PieceTemplates()
+EndMacro
+
+Procedure.a GetPieceTemplateIdx(PieceType.a, Configuration.a)
+  Protected FirstConfiguration.a
+  GetPieceFirstConfiguration(PieceType, FirstConfiguration)
+  
+  Protected NumConfigurations.a = PiecesConfiguration(PieceType)\NumConfigurations
+  
+  ProcedureReturn FirstConfiguration + (Configuration % NumConfigurations)
+  
+EndProcedure
+
+Procedure CreateFallingPieceWheelSprites()
+  Protected PieceType.a
+  For PieceType = #Line To #Right4
+    Protected Sprite = CreateSprite(#PB_Any, #Piece_Size * #Piece_Width,
+                                    #Piece_Size * #Piece_Height, #PB_Sprite_AlphaBlending)
+    If Sprite <> 0
+      StartDrawing(SpriteOutput(Sprite))
+      Protected FirstConfiguraton.a
+      GetPieceFirstConfiguration(PieceType, FirstConfiguraton)
+      Protected PieceTemplateIdx.a = GetPieceTemplateIdx(PieceType, FirstConfiguraton)
+      
+      Protected x.u, y.u
+      For x = 0 To #Piece_Size - 1
+        For y = 0 To #Piece_Size - 1
+          If PieceTemplates(PieceTemplateIdx)\PieceTemplate(x, y)
+            Box(x * #Piece_Width, y * #Piece_Height, #Piece_Width - 1, #Piece_Height - 1, RGB($7f, 0, 0))
+          EndIf
+        Next y
+      Next x
+      
+      StopDrawing()
+      
+      FallingPieceWheelSprites(PieceType) = Sprite
+    EndIf
+    
+  Next
+  
+EndProcedure
+
 
 Procedure InitFallingPieceWheel()
   FallingPieceWheel\CurrentTimer = 0
@@ -192,26 +238,6 @@ Procedure LoadPiecesConfigurations()
   
 EndProcedure
 
-; Procedure.a GetPieceFirstConfiguration(PieceType.a)
-;   FirstElement(PiecesConfiguration(PieceType)\PieceTemplates())
-;   ProcedureReturn PiecesConfiguration(PieceType)\PieceTemplates()
-; EndProcedure
-
-Macro GetPieceFirstConfiguration(PieceType, FirstConfiguration)
-  FirstElement(PiecesConfiguration(PieceType)\PieceTemplates())
-  FirstConfiguration = PiecesConfiguration(PieceType)\PieceTemplates()
-EndMacro
-
-Procedure.a GetPieceTemplateIdx(PieceType.a, Configuration.a)
-  Protected FirstConfiguration.a
-  GetPieceFirstConfiguration(PieceType, FirstConfiguration)
-  
-  Protected NumConfigurations.a = PiecesConfiguration(PieceType)\NumConfigurations
-  
-  ProcedureReturn FirstConfiguration + (Configuration % NumConfigurations)
-  
-EndProcedure
-
 Procedure.q GetPieceColor(PieceInfo.u)
   If PieceInfo & #RedColor
     ProcedureReturn #Red
@@ -260,21 +286,24 @@ Procedure DrawFallingPiece()
 EndProcedure
 
 Procedure DrawFallingPieceWheel()
-  Protected PieceConfiguration.a
-  GetPieceFirstConfiguration(FallingPieceWheel\PieceType, PieceConfiguration)
+;   Protected PieceConfiguration.a
+;   GetPieceFirstConfiguration(FallingPieceWheel\PieceType, PieceConfiguration)
+;   
+;   Protected PieceTemplateIdx.a = GetPieceTemplateIdx(FallingPieceWheel\PieceType, PieceConfiguration)
+;   
+;   Protected i.u, j.u
+;   For i = 0 To #Piece_Size - 1
+;     For j = 0 To #Piece_Size - 1
+;       If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j)
+;         Box(FallingPieceWheel\x + i * #Piece_Width, FallingPieceWheel\y + j * #Piece_Height, #Piece_Width - 1, #Piece_Height - 1, RGB($7f, 0, 0))
+;       EndIf
+;       
+;     Next j
+;     
+;   Next i
   
-  Protected PieceTemplateIdx.a = GetPieceTemplateIdx(FallingPieceWheel\PieceType, PieceConfiguration)
-  
-  Protected i.u, j.u
-  For i = 0 To #Piece_Size - 1
-    For j = 0 To #Piece_Size - 1
-      If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j)
-        Box(FallingPieceWheel\x + i * #Piece_Width, FallingPieceWheel\y + j * #Piece_Height, #Piece_Width - 1, #Piece_Height - 1, RGB($7f, 0, 0))
-      EndIf
-      
-    Next j
-    
-  Next i
+  DisplayTransparentSprite(FallingPieceWheelSprites(FallingPieceWheel\PieceType), FallingPieceWheel\x, FallingPieceWheel\y)
+  ;DisplayTransparentSprite(FallingPieceWheelSprites(FallingPieceWheel\PieceType), 0, 0)
   
   
   
@@ -308,9 +337,11 @@ Procedure Draw()
   
   DrawPlayFieldOutline()
   
+  StopDrawing()
+  
   DrawFallingPieceWheel()
   
-  StopDrawing()
+  
 EndProcedure
 
 Procedure.a IsCellWithinPlayField(CellX.w, CellY.w)
@@ -439,6 +470,9 @@ Procedure UpdateFallingPiece(Elapsed.f)
   
 EndProcedure
 
+Procedure UpdateFallingPieceWheel(Elapsed.f)
+  
+EndProcedure
 
 Procedure Update(Elapsed.f)
   UpdateFallingPiece(Elapsed)
@@ -449,13 +483,14 @@ EndProcedure
 InitSprite()
 InitKeyboard()
 
+OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One Button Tetris", #PB_Window_ScreenCentered)
+OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
+
 LoadPiecesTemplate()
 LoadPiecesConfigurations()
 InitPlayField()
 InitFallingPieceWheel()
-
-OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One Button Tetris", #PB_Window_ScreenCentered)
-OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
+CreateFallingPieceWheelSprites()
 
 LastTimeInMs = ElapsedMilliseconds()
 ;LaunchRandomFallingPiece()
