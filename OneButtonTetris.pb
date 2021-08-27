@@ -31,6 +31,7 @@ Enumeration TPieceType
   #Tee
   #Right4
 EndEnumeration
+#Num_Piece_Types = #Right4 + 1
 
 Enumeration TGameState
   #ChoosingFallingPiece
@@ -77,6 +78,9 @@ Structure TFallingPieceWheel
   y.f
   PieceType.a
   CurrentTimer.f
+  CurrentPieceBackgroundSprite.i
+  ChoosedPiece.a
+  ChoosedPieceTimer.f
 EndStructure
 
 
@@ -85,6 +89,7 @@ Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
 Global PlayField.TPlayField, FallingPiece.TFallingPiece, FallingPieceWheel.TFallingPieceWheel
 Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
 Global Dim FallingPieceWheelSprites(#Right4)
+Global SpaceKeyReleased.i = #False
 
 ;Reads a list of integers separated by Separator and put them on IntegerList()
 ;no check is performed for valid integers in StringList
@@ -137,6 +142,8 @@ Procedure CreateFallingPieceWheelSprites()
                                     #Piece_Size * #Piece_Height, #PB_Sprite_AlphaBlending)
     If Sprite <> 0
       StartDrawing(SpriteOutput(Sprite))
+      DrawingMode(#PB_2DDrawing_AllChannels)
+      Box(0, 0, SpriteWidth(Sprite), SpriteHeight(Sprite), RGBA(0, 0, 0, 0))
       Protected FirstConfiguraton.a
       GetPieceFirstConfiguration(PieceType, FirstConfiguraton)
       Protected PieceTemplateIdx.a = GetPieceTemplateIdx(PieceType, FirstConfiguraton)
@@ -145,13 +152,12 @@ Procedure CreateFallingPieceWheelSprites()
       For x = 0 To #Piece_Size - 1
         For y = 0 To #Piece_Size - 1
           If PieceTemplates(PieceTemplateIdx)\PieceTemplate(x, y)
-            Box(x * #Piece_Width, y * #Piece_Height, #Piece_Width - 1, #Piece_Height - 1, RGB($7f, 0, 0))
+            Box(x * #Piece_Width, y * #Piece_Height, #Piece_Width - 1, #Piece_Height - 1, RGBA($7f, 0, 0, $ff))
           EndIf
         Next y
       Next x
       
       StopDrawing()
-      
       FallingPieceWheelSprites(PieceType) = Sprite
     EndIf
     
@@ -159,12 +165,25 @@ Procedure CreateFallingPieceWheelSprites()
   
 EndProcedure
 
-
-Procedure InitFallingPieceWheel()
+Procedure SetupFallingPieceWheel()
   FallingPieceWheel\CurrentTimer = 0
   FallingPieceWheel\PieceType = Random(#Right4, #Line)
+  FallingPieceWheel\ChoosedPiece = #False
+  FallingPieceWheel\ChoosedPieceTimer = 0.0
+EndProcedure
+
+
+Procedure InitFallingPieceWheel()
+  SetupFallingPieceWheel()
   FallingPieceWheel\x = PlayField\x + PlayField\Width + 10
   FallingPieceWheel\y = PlayField\y + PlayField\Height / 2 - (#Piece_Size * #Piece_Height) / 2
+  FallingPieceWheel\CurrentPieceBackgroundSprite = CreateSprite(#PB_Any, 120, 120, #PB_Sprite_AlphaBlending)
+  If FallingPieceWheel\CurrentPieceBackgroundSprite <> 0
+    StartDrawing(SpriteOutput(FallingPieceWheel\CurrentPieceBackgroundSprite))
+    Box(0, 0, 120, 120, RGB(255, 255, 255))
+    StopDrawing()
+  EndIf
+  
 EndProcedure
 
 
@@ -286,25 +305,30 @@ Procedure DrawFallingPiece()
 EndProcedure
 
 Procedure DrawFallingPieceWheel()
-;   Protected PieceConfiguration.a
-;   GetPieceFirstConfiguration(FallingPieceWheel\PieceType, PieceConfiguration)
-;   
-;   Protected PieceTemplateIdx.a = GetPieceTemplateIdx(FallingPieceWheel\PieceType, PieceConfiguration)
-;   
-;   Protected i.u, j.u
-;   For i = 0 To #Piece_Size - 1
-;     For j = 0 To #Piece_Size - 1
-;       If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j)
-;         Box(FallingPieceWheel\x + i * #Piece_Width, FallingPieceWheel\y + j * #Piece_Height, #Piece_Width - 1, #Piece_Height - 1, RGB($7f, 0, 0))
-;       EndIf
-;       
-;     Next j
-;     
-;   Next i
   
-  DisplayTransparentSprite(FallingPieceWheelSprites(FallingPieceWheel\PieceType), FallingPieceWheel\x, FallingPieceWheel\y)
-  ;DisplayTransparentSprite(FallingPieceWheelSprites(FallingPieceWheel\PieceType), 0, 0)
-  
+  Protected i.a, x.f, y.f
+  For i = #Line To #Right4
+    Protected Column.a = i % 3
+    Protected Line.a = i / 3
+    x = PlayField\x + PlayField\Width + 10 + Column * (#Piece_Size * #Piece_Width + 10)
+    y = 0 + 10 + Line * (#Piece_Size * #Piece_Height + 10)
+    If i = FallingPieceWheel\PieceType
+      If Not FallingPieceWheel\ChoosedPiece
+        ;just show the background behind the current piece
+        DisplayTransparentSprite(FallingPieceWheel\CurrentPieceBackgroundSprite, x, y)
+      ElseIf FallingPieceWheel\ChoosedPieceTimer > 0
+        Protected Timer.l = (FallingPieceWheel\ChoosedPieceTimer * 1000) / 50
+        Protected Intensity = 255 * (Timer % 2)
+        DisplayTransparentSprite(FallingPieceWheel\CurrentPieceBackgroundSprite, x, y, Intensity)
+      ElseIf FallingPieceWheel\ChoosedPieceTimer <= 0
+        DisplayTransparentSprite(FallingPieceWheel\CurrentPieceBackgroundSprite, x, y)
+        
+      EndIf
+      
+    EndIf
+    
+    DisplayTransparentSprite(FallingPieceWheelSprites(i), x, y)
+  Next
   
   
 EndProcedure
@@ -392,7 +416,7 @@ Procedure UpdateFallingPiece(Elapsed.f)
   ;gets the current template used by the falling piece
   Protected PieceTemplateIdx.a = GetPieceTemplateIdx(FallingPiece\Type, FallingPiece\Configuration)
   
-  If KeyboardReleased(#PB_Key_Space)
+  If SpaceKeyReleased
     FallingPiece\Configuration = (FallingPiece\Configuration + 1) % NumConfigurations
   EndIf
   
@@ -471,11 +495,36 @@ Procedure UpdateFallingPiece(Elapsed.f)
 EndProcedure
 
 Procedure UpdateFallingPieceWheel(Elapsed.f)
+  FallingPieceWheel\CurrentTimer + Elapsed
+  If FallingPieceWheel\CurrentTimer > 0.750 And (Not FallingPieceWheel\ChoosedPiece)
+    ;just cycle through the pieces
+    FallingPieceWheel\CurrentTimer  = 0
+    FallingPieceWheel\PieceType = (FallingPieceWheel\PieceType + 1) % #Num_Piece_Types
+  EndIf
+  
+  If SpaceKeyReleased And (Not FallingPieceWheel\ChoosedPiece)
+    ;the player chose the current piece
+    FallingPieceWheel\ChoosedPiece = #True
+    FallingPieceWheel\ChoosedPieceTimer = 0.5
+  EndIf
+  
+  If FallingPieceWheel\ChoosedPiece And FallingPieceWheel\ChoosedPieceTimer >=0
+    ;we use this timer to flash the chosen piece
+    FallingPieceWheel\ChoosedPieceTimer - Elapsed
+  EndIf
   
 EndProcedure
 
+Procedure CheckKeys()
+  ExamineKeyboard()
+  SpaceKeyReleased = KeyboardReleased(#PB_Key_Space)
+EndProcedure
+
+
 Procedure Update(Elapsed.f)
+  CheckKeys()
   UpdateFallingPiece(Elapsed)
+  UpdateFallingPieceWheel(Elapsed)
 EndProcedure
 
 
@@ -498,7 +547,7 @@ LastTimeInMs = ElapsedMilliseconds()
 Repeat
   ElapsedTimneInS = (ElapsedMilliseconds() - LastTimeInMs) / 1000.0
   LastTimeInMs = ElapsedMilliseconds()
-  ExamineKeyboard()
+  
   Global event = WindowEvent()
   
   ;Update
