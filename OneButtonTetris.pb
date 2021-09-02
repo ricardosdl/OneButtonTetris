@@ -83,12 +83,22 @@ Structure TFallingPieceWheel
   ChoosedPieceTimer.f
 EndStructure
 
+Structure TFallingPiecePosition
+  Column.a
+  CurrentTimer.f
+  ChoosedPosition.a
+  ChoosedPositionTimer.f
+EndStructure
+
+
 
 Global ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
-Global PlayField.TPlayField, FallingPiece.TFallingPiece, FallingPieceWheel.TFallingPieceWheel
+Global PlayField.TPlayField, FallingPiece.TFallingPiece, FallingPieceWheel.TFallingPieceWheel,
+       FallingPiecePosition.TFallingPiecePosition
+Global GameState.a
 Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
-Global Dim FallingPieceWheelSprites(#Right4)
+Global Dim FallingPieceWheelSprites(#Right4), FallingPiecePositionSprite.i = #False
 Global SpaceKeyReleased.i = #False
 
 ;Reads a list of integers separated by Separator and put them on IntegerList()
@@ -134,6 +144,25 @@ Procedure.a GetPieceTemplateIdx(PieceType.a, Configuration.a)
   ProcedureReturn FirstConfiguration + (Configuration % NumConfigurations)
   
 EndProcedure
+
+Procedure CreateFallingPiecePositionSprite()
+  Protected Sprite = CreateSprite(#PB_Any, #Piece_Width, #PlayFieldSize_Height * #Piece_Height, #PB_Sprite_AlphaBlending)
+  If Sprite = 0
+    ;error creating
+    ProcedureReturn #False
+  EndIf
+  
+  StartDrawing(SpriteOutput(Sprite))
+  DrawingMode(#PB_2DDrawing_AllChannels)
+  ;Box(0, 0, SpriteWidth(Sprite), SpriteHeight(Sprite), RGBA($ff, $33, $33, 45))
+  Box(0, 0, SpriteWidth(Sprite), SpriteHeight(Sprite), RGBA($cc, $ff, $ff, 100))
+  StopDrawing()
+  
+  FallingPiecePositionSprite = Sprite
+  
+  
+EndProcedure
+
 
 Procedure CreateFallingPieceWheelSprites()
   Protected PieceType.a
@@ -185,6 +214,15 @@ Procedure InitFallingPieceWheel()
   EndIf
   
 EndProcedure
+
+Procedure InitFallingPiecePosition()
+  FallingPiecePosition\Column = 0
+  FallingPiecePosition\CurrentTimer = 0
+  FallingPiecePosition\ChoosedPosition = #False
+  FallingPiecePosition\ChoosedPositionTimer = 0
+  
+EndProcedure
+
 
 
 
@@ -340,9 +378,23 @@ Procedure DrawPlayFieldOutline()
   Line(PlayField\x + #PlayFieldSize_Width * #Piece_Width, 1, 1, #PlayFieldSize_Height * #Piece_Height, RGB($7f, 80, 70))
 EndProcedure
 
-
+Procedure DrawFallingPiecePosition()
+  If Not FallingPiecePosition\ChoosedPosition
+    DisplayTransparentSprite(FallingPiecePositionSprite, FallingPiecePosition\Column * #Piece_Width, 0)
+  ElseIf FallingPiecePosition\ChoosedPositionTimer > 0
+    Protected Timer.l = (FallingPiecePosition\ChoosedPositionTimer * 1000) / 50
+    Protected Intensity = 255 * (Timer % 2)
+    DisplayTransparentSprite(FallingPiecePositionSprite, FallingPiecePosition\Column * #Piece_Width, 0, Intensity)
+  ElseIf FallingPiecePosition\ChoosedPositionTimer <= 0
+    DisplayTransparentSprite(FallingPiecePositionSprite, FallingPiecePosition\Column * #Piece_Width, 0)
+  EndIf
+  
+EndProcedure
 
 Procedure Draw()
+  DrawFallingPiecePosition()
+  
+  
   Protected x.u, y.u
   StartDrawing(ScreenOutput())
   For x = 0 To #PlayFieldSize_Width - 1
@@ -450,32 +502,9 @@ Procedure UpdateFallingPiece(Elapsed.f)
           Break
         EndIf
         
-        
-        
-        
-        
-        
-        
-        
-        
       EndIf
     Next j
   Next i
-  
-  ;check hits with the playfield
-  For i = 0 To #PlayFieldSize_Width - 1
-    For j = 0 To #PlayFieldSize_Height - 1
-      If PlayField\PlayField(i, j) & #Empty
-        ;this playfield cell is empty
-        Continue
-      EndIf
-      
-      
-      
-    Next j
-  Next i
-  
-  
   
   If FallingPiece\IsFalling
     
@@ -495,6 +524,10 @@ Procedure UpdateFallingPiece(Elapsed.f)
 EndProcedure
 
 Procedure UpdateFallingPieceWheel(Elapsed.f)
+  If GameState <> #ChoosingFallingPiece
+    ProcedureReturn
+  EndIf
+  
   FallingPieceWheel\CurrentTimer + Elapsed
   If FallingPieceWheel\CurrentTimer > 0.750 And (Not FallingPieceWheel\ChoosedPiece)
     ;just cycle through the pieces
@@ -513,6 +546,12 @@ Procedure UpdateFallingPieceWheel(Elapsed.f)
     FallingPieceWheel\ChoosedPieceTimer - Elapsed
   EndIf
   
+  If FallingPieceWheel\ChoosedPiece And FallingPieceWheel\ChoosedPieceTimer < 0
+    GameState = #WaitingFallingPiece
+    LaunchFallingPiece(FallingPieceWheel\PieceType, FallingPiecePosition\Column)
+  EndIf
+  
+  
 EndProcedure
 
 Procedure CheckKeys()
@@ -520,11 +559,45 @@ Procedure CheckKeys()
   SpaceKeyReleased = KeyboardReleased(#PB_Key_Space)
 EndProcedure
 
+Procedure UpdateFallingPiecePosition(Elapsed.f)
+  If GameState <> #ChoosingFallingPiecePosition
+    ProcedureReturn
+  EndIf
+  
+  If SpaceKeyReleased And Not FallingPiecePosition\ChoosedPosition
+    FallingPiecePosition\ChoosedPosition = #True
+    FallingPiecePosition\ChoosedPositionTimer = 0.5
+  EndIf
+  
+  
+  If Not FallingPiecePosition\ChoosedPosition
+    FallingPiecePosition\CurrentTimer + Elapsed
+  EndIf
+  
+  If FallingPiecePosition\CurrentTimer > 0.2
+    FallingPiecePosition\Column = (FallingPiecePosition\Column + 1) % #PlayFieldSize_Width
+    FallingPiecePosition\CurrentTimer = 0
+  EndIf
+  
+  If FallingPiecePosition\ChoosedPositionTimer > 0
+    FallingPiecePosition\ChoosedPositionTimer - Elapsed
+  EndIf
+  
+  If FallingPiecePosition\ChoosedPosition And FallingPiecePosition\ChoosedPositionTimer <= 0
+    GameState = #ChoosingFallingPiece
+  EndIf
+  
+  
+  
+EndProcedure
+
+
 
 Procedure Update(Elapsed.f)
   CheckKeys()
   UpdateFallingPiece(Elapsed)
   UpdateFallingPieceWheel(Elapsed)
+  UpdateFallingPiecePosition(Elapsed)
 EndProcedure
 
 
@@ -540,6 +613,9 @@ LoadPiecesConfigurations()
 InitPlayField()
 InitFallingPieceWheel()
 CreateFallingPieceWheelSprites()
+CreateFallingPiecePositionSprite()
+
+GameState = #ChoosingFallingPiecePosition
 
 LastTimeInMs = ElapsedMilliseconds()
 ;LaunchRandomFallingPiece()
