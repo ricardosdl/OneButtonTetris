@@ -9,6 +9,7 @@
 #Piece_Size = 4
 #Piece_Templates = 19
 #Fall_Time = 0.2
+#Falling_Piece_Wheel_Timer = 0.2
 
 EnumerationBinary TPieceInfo
   #Empty
@@ -548,7 +549,7 @@ Procedure UpdateFallingPieceWheel(Elapsed.f)
   EndIf
   
   FallingPieceWheel\CurrentTimer + Elapsed
-  If FallingPieceWheel\CurrentTimer > 0.750 And (Not FallingPieceWheel\ChoosedPiece)
+  If FallingPieceWheel\CurrentTimer > #Falling_Piece_Wheel_Timer And (Not FallingPieceWheel\ChoosedPiece)
     ;just cycle through the pieces
     FallingPieceWheel\CurrentTimer  = 0
     FallingPieceWheel\PieceType = (FallingPieceWheel\PieceType + 1) % #Num_Piece_Types
