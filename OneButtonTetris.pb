@@ -343,6 +343,10 @@ Procedure ChangeGameState(NewState.a)
   
 EndProcedure
 
+Procedure.a IsCellWithinPlayField(CellX.w, CellY.w)
+  ProcedureReturn Bool((CellX >= 0  And CellX < #PlayFieldSize_Width) And
+                       (CellY >= 0 And CellY < #PlayFieldSize_Height))
+EndProcedure
 
 Procedure DrawFallingPiece()
   If Not FallingPiece\IsFalling
@@ -358,9 +362,10 @@ Procedure DrawFallingPiece()
   Protected i.u, j.u
   For i = 0 To #Piece_Size - 1
     For j = 0 To #Piece_Size - 1
-      If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j)
+      Protected CellX.w = x + i
+      Protected CellY.w = y + j
+      If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j) And IsCellWithinPlayField(CellX, CellY)
         Box(x * #Piece_Width + i * #Piece_Width, y * #Piece_Height + j * #Piece_Height, #Piece_Width - 1, #Piece_Height - 1, RGB($7f, 0, 0))
-        ;Box(100, 100, #Piece_Width - 1, #Piece_Height - 1, RGB($7f, 0, 0))
       EndIf
       
     Next j
@@ -446,11 +451,6 @@ Procedure Draw()
   DrawFallingPieceWheel()
   
   
-EndProcedure
-
-Procedure.a IsCellWithinPlayField(CellX.w, CellY.w)
-  ProcedureReturn Bool((CellX >= 0  And CellX < #PlayFieldSize_Width) And
-                       (CellY >= 0 And CellY < #PlayFieldSize_Height))
 EndProcedure
 
 Procedure SaveFallingPieceOnPlayField()
