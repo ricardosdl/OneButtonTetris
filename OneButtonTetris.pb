@@ -194,7 +194,7 @@ Procedure CreateFallingPieceWheelSprites()
   
 EndProcedure
 
-Procedure SetupFallingPieceWheel()
+Procedure InitFallingPieceWheel()
   FallingPieceWheel\CurrentTimer = 0
   FallingPieceWheel\PieceType = Random(#Right4, #Line)
   FallingPieceWheel\ChoosedPiece = #False
@@ -202,8 +202,8 @@ Procedure SetupFallingPieceWheel()
 EndProcedure
 
 
-Procedure InitFallingPieceWheel()
-  SetupFallingPieceWheel()
+Procedure SetupFallingPieceWheel()
+  InitFallingPieceWheel()
   FallingPieceWheel\x = PlayField\x + PlayField\Width + 10
   FallingPieceWheel\y = PlayField\y + PlayField\Height / 2 - (#Piece_Size * #Piece_Height) / 2
   FallingPieceWheel\CurrentPieceBackgroundSprite = CreateSprite(#PB_Any, 120, 120, #PB_Sprite_AlphaBlending)
@@ -315,6 +315,33 @@ Procedure.q GetPieceColor(PieceInfo.u)
   ProcedureReturn #Black
   
 EndProcedure
+
+Procedure LaunchFallingPiece(Type.a, PosX.w = 0, PosY.w = -3)
+  FallingPiece\PosX = PosX
+  FallingPiece\PosY = PosY
+  FallingPiece\Type = Type
+  FallingPiece\Configuration = 0
+  FallingPiece\IsFalling = #True
+EndProcedure
+
+Procedure ChangeGameState(NewState.a)
+  Protected OldGameState.a = GameState
+  Select NewState
+    Case #ChoosingFallingPiecePosition
+      InitFallingPiecePosition()
+      InitFallingPieceWheel()
+      GameState = NewState
+      
+    Case #WaitingFallingPiece
+      LaunchFallingPiece(FallingPieceWheel\PieceType, FallingPiecePosition\Column)
+      GameState = NewState
+      
+    Case #ChoosingFallingPiece
+      GameState = #ChoosingFallingPiece
+  EndSelect
+  
+EndProcedure
+
 
 Procedure DrawFallingPiece()
   If Not FallingPiece\IsFalling
@@ -443,15 +470,7 @@ Procedure SaveFallingPieceOnPlayField()
     Next j
     
   Next i
-EndProcedure
-
-
-Procedure LaunchFallingPiece(Type.a, PosX.w = 0, PosY.w = -3)
-  FallingPiece\PosX = PosX
-  FallingPiece\PosY = PosY
-  FallingPiece\Type = Type
-  FallingPiece\Configuration = 0
-  FallingPiece\IsFalling = #True
+  ChangeGameState(#ChoosingFallingPiecePosition)
 EndProcedure
 
 Procedure LaunchRandomFallingPiece()
@@ -547,8 +566,7 @@ Procedure UpdateFallingPieceWheel(Elapsed.f)
   EndIf
   
   If FallingPieceWheel\ChoosedPiece And FallingPieceWheel\ChoosedPieceTimer < 0
-    GameState = #WaitingFallingPiece
-    LaunchFallingPiece(FallingPieceWheel\PieceType, FallingPiecePosition\Column)
+    ChangeGameState(#WaitingFallingPiece)
   EndIf
   
   
@@ -584,7 +602,7 @@ Procedure UpdateFallingPiecePosition(Elapsed.f)
   EndIf
   
   If FallingPiecePosition\ChoosedPosition And FallingPiecePosition\ChoosedPositionTimer <= 0
-    GameState = #ChoosingFallingPiece
+    ChangeGameState(#ChoosingFallingPiece)
   EndIf
   
   
@@ -611,11 +629,11 @@ OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
 LoadPiecesTemplate()
 LoadPiecesConfigurations()
 InitPlayField()
-InitFallingPieceWheel()
+SetupFallingPieceWheel()
 CreateFallingPieceWheelSprites()
 CreateFallingPiecePositionSprite()
 
-GameState = #ChoosingFallingPiecePosition
+ChangeGameState(#ChoosingFallingPiecePosition)
 
 LastTimeInMs = ElapsedMilliseconds()
 ;LaunchRandomFallingPiece()
