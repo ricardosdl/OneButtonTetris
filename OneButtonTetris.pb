@@ -10,6 +10,7 @@
 #Piece_Templates = 19
 #Fall_Time = 0.2
 #Falling_Piece_Wheel_Timer = 0.2
+#Falling_Piece_Position_Timer = 0.2
 
 EnumerationBinary TPieceInfo
   #Empty
@@ -38,6 +39,7 @@ Enumeration TGameState
   #ChoosingFallingPiece
   #ChoosingFallingPiecePosition
   #WaitingFallingPiece
+  #ScoringCompletedLines
 EndEnumeration
 
 
@@ -339,6 +341,9 @@ Procedure ChangeGameState(NewState.a)
       
     Case #ChoosingFallingPiece
       GameState = #ChoosingFallingPiece
+      
+    Case #ScoringCompletedLines
+      
   EndSelect
   
 EndProcedure
@@ -453,6 +458,30 @@ Procedure Draw()
   
 EndProcedure
 
+Procedure.a CheckCompletedLines(*PlayField.TPlayField, List CompletedLines.a())
+  ;we go on each line in the playfield and store this line if it complete
+  ;so we can increase the score
+  Protected x.w, y.w
+  For y = #PlayFieldSize_Height - 1 To 0 Step -1
+    Protected IsLineCompleted.a = #True
+    For x = 0 To #PlayFieldSize_Width -1
+      If (*PlayField\PlayField(x, y) & #Empty)
+        IsLineCompleted = #False
+        Break
+      EndIf
+      
+    Next x
+    If IsLineCompleted
+      AddElement(CompletedLines())
+      CompletedLines() = y
+    EndIf
+    
+  Next y
+  
+  ProcedureReturn ListSize(CompletedLines())
+EndProcedure
+
+
 Procedure SaveFallingPieceOnPlayField()
   Protected PieceTemplateIdx.a = GetPieceTemplateIdx(FallingPiece\Type, FallingPiece\Configuration)
   Protected i.u, j.u
@@ -471,6 +500,13 @@ Procedure SaveFallingPieceOnPlayField()
     Next j
     
   Next i
+  
+  NewList CompletedLines.a()
+  If CheckCompletedLines(@PlayField, CompletedLines())
+    Debug "completed " + Str(ListSize(CompletedLines())) + " lines"
+  EndIf
+  
+  
   ChangeGameState(#ChoosingFallingPiecePosition)
 EndProcedure
 
@@ -593,7 +629,7 @@ Procedure UpdateFallingPiecePosition(Elapsed.f)
     FallingPiecePosition\CurrentTimer + Elapsed
   EndIf
   
-  If FallingPiecePosition\CurrentTimer > 0.2
+  If FallingPiecePosition\CurrentTimer > #Falling_Piece_Position_Timer
     FallingPiecePosition\Column = (FallingPiecePosition\Column + 1) % #PlayFieldSize_Width
     FallingPiecePosition\CurrentTimer = 0
   EndIf
@@ -610,13 +646,20 @@ Procedure UpdateFallingPiecePosition(Elapsed.f)
   
 EndProcedure
 
-
+Procedure UpdateScoringCompletedLines(Elapsed.f)
+  If GameState <> #ScoringCompletedLines
+    ProcedureReturn
+  EndIf
+  
+  
+EndProcedure
 
 Procedure Update(Elapsed.f)
   CheckKeys()
   UpdateFallingPiece(Elapsed)
   UpdateFallingPieceWheel(Elapsed)
   UpdateFallingPiecePosition(Elapsed)
+  UpdateScoringCompletedLines(Elapsed)
 EndProcedure
 
 
