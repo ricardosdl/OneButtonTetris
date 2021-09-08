@@ -86,8 +86,9 @@ Structure TFallingPiecePosition
 EndStructure
 
 Structure TCompletedLines
-  List CompletedLines.a()
+  CompletedLine.b
   CurrentColumn.b
+  SequentialCompletedLines.a
 EndStructure
 
 Structure TPlayField
@@ -154,12 +155,15 @@ Procedure LaunchFallingPiece(*PlayField.TPlayField, Type.a, PosX.w = 0, PosY.w =
 EndProcedure
 
 Procedure ClearPlayFieldCompletedLines(*PlayField.TPlayField)
-  ClearList(*PlayField\CompletedLines\CompletedLines())
+  *PlayField\CompletedLines\CompletedLine = -1
   *PlayField\CompletedLines\CurrentColumn = -1
+  *PlayField\CompletedLines\SequentialCompletedLines = 0
+  ;ClearList(*PlayField\CompletedLines\CompletedLines())
+  ;*PlayField\CompletedLines\CurrentColumn = -1
 EndProcedure
 
 Procedure.a CountPlayFieldCompletedLines(*PlayField.TPlayField)
-  ProcedureReturn ListSize(*PlayField\CompletedLines\CompletedLines())
+  ;ProcedureReturn ListSize(*PlayField\CompletedLines\CompletedLines())
 EndProcedure
 
 
@@ -488,10 +492,11 @@ Procedure Draw(*PLayField.TPlayField)
 EndProcedure
 
 Procedure.a CheckCompletedLines(*PlayField.TPlayField)
-  ;we go on each line in the playfield and store this line if it complete
-  ;so we can increase the score
+  ;we go on each line in the playfield trying to find a completed line
+  ;if found we store it on the playfield\completedlines
   Protected x.w, y.w
   For y = #PlayFieldSize_Height - 1 To 0 Step -1
+    ;we assume there is a completed line
     Protected IsLineCompleted.a = #True
     For x = 0 To #PlayFieldSize_Width -1
       If (*PlayField\PlayField(x, y) & #Empty)
@@ -501,13 +506,16 @@ Procedure.a CheckCompletedLines(*PlayField.TPlayField)
       
     Next x
     If IsLineCompleted
-      AddElement(*PlayField\CompletedLines\CompletedLines())
-      *PlayField\CompletedLines\CompletedLines() = y
+      ;if there is a completed line we store its info and return true
+      *PlayField\CompletedLines\CompletedLine = y
+      *PlayField\CompletedLines\CurrentColumn = #PlayFieldSize_Width - 1
+      *PlayField\CompletedLines\SequentialCompletedLines + 1
+      ProcedureReturn IsLineCompleted
     EndIf
     
   Next y
-  
-  ProcedureReturn ListSize(*PlayField\CompletedLines\CompletedLines())
+  ;no completed lines found
+  ProcedureReturn #False
 EndProcedure
 
 
@@ -533,7 +541,7 @@ Procedure SaveFallingPieceOnPlayField(*PlayField.TPlayField)
   
   ClearPlayFieldCompletedLines(*PlayField)
   If CheckCompletedLines(*PlayField)
-    Debug "completed " + Str(ListSize(*PlayField\CompletedLines\CompletedLines())) + " lines"
+    ;Debug "completed " + Str(ListSize(*PlayField\CompletedLines\CompletedLines())) + " lines"
     ChangeGameState(*PlayField, #ScoringCompletedLines)
   Else
     ChangeGameState(*PlayField, #ChoosingFallingPiecePosition)
@@ -697,8 +705,7 @@ Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
     ProcedureReturn
   EndIf
   
-  FirstElement(*PLayField\CompletedLines\CompletedLines())
-  Protected CurrentLine.a = *PLayField\CompletedLines\CompletedLines()
+  Protected CurrentLine.a = *PLayField\CompletedLines\CompletedLine
   
   Protected CurrentColumn.b = *PLayField\CompletedLines\CurrentColumn
   
@@ -710,15 +717,12 @@ Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
     *PLayField\CompletedLines\CurrentColumn = CurrentColumn
   Else
     ;finished all columns on the current line
-    
-    BringPlayFieldOneLineDown(*PLayField, CurrentLine + 1)
-    DeleteElement(*PLayField\CompletedLines\CompletedLines())
-    *PLayField\CompletedLines\CurrentColumn = #PlayFieldSize_Width - 1
-    If ListSize(*PLayField\CompletedLines\CompletedLines()) = 0
+    BringPlayFieldOneLineDown(*PLayField, CurrentLine - 1)
+    If Not CheckCompletedLines(*PLayField)
+      Debug "sequential completed lines:" + Str(*PLayField\CompletedLines\SequentialCompletedLines)
+      ClearPlayFieldCompletedLines(*PLayField)
       ChangeGameState(*PLayField, #ChoosingFallingPiecePosition)
-      ProcedureReturn
     EndIf
-    
   EndIf
   
   
