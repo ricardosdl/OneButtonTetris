@@ -4,8 +4,6 @@
 #Game_Height = 600
 #PlayFieldSize_Width = 10;pieces
 #PlayFieldSize_Height = 20;pieces
-#Piece_Width = (#Game_Height / 2) / #PlayFieldSize_Width
-#Piece_Height = #Piece_Width
 #Piece_Size = 4
 #Piece_Templates = 19
 #Fall_Time = 0.2
@@ -108,6 +106,8 @@ EndStructure
 
 Global ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
+;holds the current pieces widht and height (according to the number of players)
+Global Piece_Width.w, Piece_Height.w
 Global PlayField.TPlayField, FallingPiece.TFallingPiece, FallingPieceWheel.TFallingPieceWheel,
        FallingPiecePosition.TFallingPiecePosition
 Global GameState.a
@@ -162,11 +162,31 @@ Procedure ClearPlayFieldCompletedLines(*PlayField.TPlayField)
   ;*PlayField\CompletedLines\CurrentColumn = -1
 EndProcedure
 
-Procedure.a CountPlayFieldCompletedLines(*PlayField.TPlayField)
-  ;ProcedureReturn ListSize(*PlayField\CompletedLines\CompletedLines())
+Procedure.a SetupPlayFieldSizes(NumPlayers.a)
+  If NumPlayers < 1 Or NumPlayers > 4
+    ProcedureReturn #False
+  EndIf
+  
+  Select NumPlayers
+    Case 1
+      Piece_Width = (#Game_Width / 2) / #PlayFieldSize_Width
+      Piece_Height = #Game_Height / #PlayFieldSize_Height
+    Case 2
+      Piece_Width = (#Game_Width / 4) / #PlayFieldSize_Width
+      Piece_Height = #Game_Height / #PlayFieldSize_Height
+    Case 3
+      Piece_Width = (#Game_Width / 4) / #PlayFieldSize_Width
+      Piece_Height = #Game_Height / 2 / #PlayFieldSize_Height
+    Case 4
+      Piece_Width = (#Game_Width / 4) / #PlayFieldSize_Width
+      Piece_Height = #Game_Height / 2 / #PlayFieldSize_Height
+      
+  EndSelect
+  
+  
+  
+  
 EndProcedure
-
-
 
 Procedure ChangeGameState(*PlayField.TPlayField, NewState.a)
   Protected OldGameState.a = *PlayField\GameState
@@ -200,8 +220,8 @@ Procedure InitPlayField(*PlayField.TPlayField)
     Next y
     
   Next x
-  *PlayField\Width = #PlayFieldSize_Width * #Piece_Width
-  *PlayField\Height = #PlayFieldSize_Height * #Piece_Height
+  *PlayField\Width = #PlayFieldSize_Width * Piece_Width
+  *PlayField\Height = #PlayFieldSize_Height * Piece_Height
   ClearPlayFieldCompletedLines(*PlayField)
   ;*PlayField\GameState = #ChoosingFallingPiecePosition
   ChangeGameState(*PlayField, #ChoosingFallingPiecePosition)
@@ -224,7 +244,7 @@ Procedure.a GetPieceTemplateIdx(PieceType.a, Configuration.a)
 EndProcedure
 
 Procedure CreateFallingPiecePositionSprite()
-  Protected Sprite = CreateSprite(#PB_Any, #Piece_Width, #PlayFieldSize_Height * #Piece_Height, #PB_Sprite_AlphaBlending)
+  Protected Sprite = CreateSprite(#PB_Any, Piece_Width, #PlayFieldSize_Height * Piece_Height, #PB_Sprite_AlphaBlending)
   If Sprite = 0
     ;error creating
     ProcedureReturn #False
@@ -245,8 +265,8 @@ EndProcedure
 Procedure CreateFallingPieceWheelSprites()
   Protected PieceType.a
   For PieceType = #Line To #Right4
-    Protected Sprite = CreateSprite(#PB_Any, #Piece_Size * #Piece_Width,
-                                    #Piece_Size * #Piece_Height, #PB_Sprite_AlphaBlending)
+    Protected Sprite = CreateSprite(#PB_Any, #Piece_Size * Piece_Width,
+                                    #Piece_Size * Piece_Height, #PB_Sprite_AlphaBlending)
     If Sprite <> 0
       StartDrawing(SpriteOutput(Sprite))
       DrawingMode(#PB_2DDrawing_AllChannels)
@@ -259,7 +279,7 @@ Procedure CreateFallingPieceWheelSprites()
       For x = 0 To #Piece_Size - 1
         For y = 0 To #Piece_Size - 1
           If PieceTemplates(PieceTemplateIdx)\PieceTemplate(x, y)
-            Box(x * #Piece_Width, y * #Piece_Height, #Piece_Width - 1, #Piece_Height - 1, RGBA($7f, 0, 0, $ff))
+            Box(x * Piece_Width, y * Piece_Height, Piece_Width - 1, Piece_Height - 1, RGBA($7f, 0, 0, $ff))
           EndIf
         Next y
       Next x
@@ -276,11 +296,12 @@ Procedure SetupFallingPieceWheel(*PlayField.TPlayField)
   Protected *FallingPieceWheel.TFallingPieceWheel = @*PlayField\FallingPieceWheel
   InitFallingPieceWheel(*PlayField)
   *FallingPieceWheel\x = *PlayField\x + *PlayField\Width + 10
-  *FallingPieceWheel\y = *PlayField\y + *PlayField\Height / 2 - (#Piece_Size * #Piece_Height) / 2
-  *FallingPieceWheel\CurrentPieceBackgroundSprite = CreateSprite(#PB_Any, 120, 120, #PB_Sprite_AlphaBlending)
+  *FallingPieceWheel\y = *PlayField\y + *PlayField\Height / 2 - (#Piece_Size * Piece_Height) / 2
+  *FallingPieceWheel\CurrentPieceBackgroundSprite = CreateSprite(#PB_Any, #Piece_Size * Piece_Width, #Piece_Size * Piece_Height,
+                                                                 #PB_Sprite_AlphaBlending)
   If *FallingPieceWheel\CurrentPieceBackgroundSprite <> 0
     StartDrawing(SpriteOutput(*FallingPieceWheel\CurrentPieceBackgroundSprite))
-    Box(0, 0, 120, 120, RGB(255, 255, 255))
+    Box(0, 0, #Piece_Size * Piece_Width, #Piece_Size * Piece_Height, RGB(255, 255, 255))
     StopDrawing()
   EndIf
   
@@ -402,7 +423,7 @@ Procedure DrawFallingPiece(*PlayField.TPlayField)
       Protected CellX.w = x + i
       Protected CellY.w = y + j
       If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j) And IsCellWithinPlayField(CellX, CellY)
-        Box(x * #Piece_Width + i * #Piece_Width, y * #Piece_Height + j * #Piece_Height, #Piece_Width - 1, #Piece_Height - 1, RGB($7f, 0, 0))
+        Box(x * Piece_Width + i * Piece_Width, y * Piece_Height + j * Piece_Height, Piece_Width - 1, Piece_Height - 1, RGB($7f, 0, 0))
       EndIf
       
     Next j
@@ -416,10 +437,10 @@ Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
   Protected FallingPieceWheel.TFallingPieceWheel = *PlayField\FallingPieceWheel
   Protected i.a, x.f, y.f
   For i = #Line To #Right4
-    Protected Column.a = i % 3
-    Protected Line.a = i / 3
-    x = PlayField\x + PlayField\Width + 10 + Column * (#Piece_Size * #Piece_Width + 10)
-    y = 0 + 10 + Line * (#Piece_Size * #Piece_Height + 10)
+    Protected Column.a = i % 2
+    Protected Line.a = i / 2
+    x = *PlayField\x + *PlayField\Width + 10 + Column * (#Piece_Size * Piece_Width + 10)
+    y = 0 + 10 + Line * (#Piece_Size * Piece_Height + 10)
     If i = FallingPieceWheel\PieceType
       If Not FallingPieceWheel\ChoosedPiece
         ;just show the background behind the current piece
@@ -444,20 +465,20 @@ EndProcedure
 
 Procedure DrawPlayFieldOutline()
   ;LineXY(PlayField\x + 1, PlayField\y + 1, #PlayFieldSize_Width * #Piece_Width, PlayField\y, RGB($7f, 80, 70))
-  Line(PlayField\x + 1, PlayField\y + 1, #PlayFieldSize_Width * #Piece_Width, 1, RGB($7f, 80, 70))
-  Line(PlayField\x + #PlayFieldSize_Width * #Piece_Width, 1, 1, #PlayFieldSize_Height * #Piece_Height, RGB($7f, 80, 70))
+  Line(PlayField\x + 1, PlayField\y + 1, #PlayFieldSize_Width * Piece_Width, 1, RGB($7f, 80, 70))
+  Line(PlayField\x + #PlayFieldSize_Width * Piece_Width, 1, 1, #PlayFieldSize_Height * Piece_Height, RGB($7f, 80, 70))
 EndProcedure
 
 Procedure DrawFallingPiecePosition(*PLayField.TPlayField)
   Protected FallingPiecePosition.TFallingPiecePosition = *PLayField\FallingPiecePosition
   If Not FallingPiecePosition\ChoosedPosition
-    DisplayTransparentSprite(FallingPiecePositionSprite, FallingPiecePosition\Column * #Piece_Width, 0)
+    DisplayTransparentSprite(FallingPiecePositionSprite, FallingPiecePosition\Column * Piece_Width, 0)
   ElseIf FallingPiecePosition\ChoosedPositionTimer > 0
     Protected Timer.l = (FallingPiecePosition\ChoosedPositionTimer * 1000) / 50
     Protected Intensity = 255 * (Timer % 2)
-    DisplayTransparentSprite(FallingPiecePositionSprite, FallingPiecePosition\Column * #Piece_Width, 0, Intensity)
+    DisplayTransparentSprite(FallingPiecePositionSprite, FallingPiecePosition\Column * Piece_Width, 0, Intensity)
   ElseIf FallingPiecePosition\ChoosedPositionTimer <= 0
-    DisplayTransparentSprite(FallingPiecePositionSprite, FallingPiecePosition\Column * #Piece_Width, 0)
+    DisplayTransparentSprite(FallingPiecePositionSprite, FallingPiecePosition\Column * Piece_Width, 0)
   EndIf
   
 EndProcedure
@@ -476,7 +497,7 @@ Procedure Draw(*PLayField.TPlayField)
       
       Protected PieceInfo.u = *PlayField\PlayField(x, y)
       Protected PieceColor = GetPieceColor(PieceInfo)
-      Box(*PlayField\x + x * #Piece_Width, *PlayField\y + y * #Piece_Height, #Piece_Width - 1, #Piece_Height - 1, PieceColor)
+      Box(*PlayField\x + x * Piece_Width, *PlayField\y + y * Piece_Height, Piece_Width - 1, Piece_Height - 1, PieceColor)
     Next y
   Next x
   
@@ -753,6 +774,7 @@ OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
 
 LoadPiecesTemplate()
 LoadPiecesConfigurations()
+SetupPlayFieldSizes(1)
 InitPlayField(@PlayField)
 SetupFallingPieceWheel(@PlayField)
 CreateFallingPieceWheelSprites()
