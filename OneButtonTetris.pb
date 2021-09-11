@@ -51,6 +51,8 @@ Structure TPieceConfiguration
   PieceType.a
   NumConfigurations.a
   List PieceTemplates.a()
+  WidthInPieces.a
+  HeightInPieces.a
 EndStructure
 
 
@@ -350,30 +352,44 @@ Procedure LoadPiecesConfigurations()
   PiecesConfiguration(#Line)\PieceType = #Line
   PiecesConfiguration(#Line)\NumConfigurations = 2
   StringListToAsciiList("0,1", PiecesConfiguration(#Line)\PieceTemplates())
+  PiecesConfiguration(#Line)\WidthInPieces = 4
+  PiecesConfiguration(#Line)\HeightInPieces = 1
   
   PiecesConfiguration(#Square)\PieceType = #Square
   PiecesConfiguration(#Square)\NumConfigurations = 1
   StringListToAsciiList("2", PiecesConfiguration(#Square)\PieceTemplates())
+  PiecesConfiguration(#Square)\WidthInPieces = 2
+  PiecesConfiguration(#Square)\HeightInPieces = 2
   
   PiecesConfiguration(#LeftL)\PieceType = #LeftL
   PiecesConfiguration(#LeftL)\NumConfigurations = 4
   StringListToAsciiList("3,4,5,6", PiecesConfiguration(#LeftL)\PieceTemplates())
+  PiecesConfiguration(#LeftL)\WidthInPieces = 3
+  PiecesConfiguration(#LeftL)\HeightInPieces = 2
   
   PiecesConfiguration(#RightL)\PieceType = #RightL
   PiecesConfiguration(#RightL)\NumConfigurations = 4
   StringListToAsciiList("7,8,9,10", PiecesConfiguration(#RightL)\PieceTemplates())
+  PiecesConfiguration(#RightL)\WidthInPieces = 3
+  PiecesConfiguration(#RightL)\HeightInPieces = 2
   
   PiecesConfiguration(#Left4)\PieceType = #Left4
   PiecesConfiguration(#Left4)\NumConfigurations = 2
   StringListToAsciiList("11,12", PiecesConfiguration(#Left4)\PieceTemplates())
+  PiecesConfiguration(#Left4)\WidthInPieces = 3
+  PiecesConfiguration(#Left4)\HeightInPieces = 2
   
   PiecesConfiguration(#Tee)\PieceType = #Tee
   PiecesConfiguration(#Tee)\NumConfigurations = 4
   StringListToAsciiList("13,14,15,16", PiecesConfiguration(#Tee)\PieceTemplates())
+  PiecesConfiguration(#Tee)\WidthInPieces = 3
+  PiecesConfiguration(#Tee)\HeightInPieces = 2
   
   PiecesConfiguration(#Right4)\PieceType = #Right4
   PiecesConfiguration(#Right4)\NumConfigurations = 2
   StringListToAsciiList("17,18", PiecesConfiguration(#Right4)\PieceTemplates())
+  PiecesConfiguration(#Right4)\WidthInPieces = 3
+  PiecesConfiguration(#Right4)\HeightInPieces = 2
   
   
   
