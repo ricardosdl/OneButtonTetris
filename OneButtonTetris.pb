@@ -273,8 +273,9 @@ Procedure CreateFallingPieceWheelSprites()
       StartDrawing(SpriteOutput(Sprite))
       DrawingMode(#PB_2DDrawing_AllChannels)
       Box(0, 0, SpriteWidth(Sprite), SpriteHeight(Sprite), RGBA(0, 0, 0, 0))
-      Protected FirstConfiguraton.a
-      GetPieceFirstConfiguration(PieceType, FirstConfiguraton)
+      ;each of the 19 piece templates is stored sequentially, from 0 to 18
+      ;but each piece first configuration is zero (in the list of piece configurations)
+      Protected FirstConfiguraton.a = 0
       Protected PieceTemplateIdx.a = GetPieceTemplateIdx(PieceType, FirstConfiguraton)
       
       Protected x.u, y.u
