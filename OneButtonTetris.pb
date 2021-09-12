@@ -452,13 +452,13 @@ EndProcedure
 
 Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
   Protected FallingPieceWheel.TFallingPieceWheel = *PlayField\FallingPieceWheel
-  Protected i.a, x.f, y.f
-  For i = #Line To #Right4
-    Protected Column.a = i % 2
-    Protected Line.a = i / 2
+  Protected CurrentPieceType.a, x.f, y.f
+  For CurrentPieceType = #Line To #Right4
+    Protected Column.a = CurrentPieceType % 2
+    Protected Line.a = CurrentPieceType / 2
     x = *PlayField\x + *PlayField\Width + 10 + Column * (#Piece_Size * Piece_Width + 10)
     y = 0 + 10 + Line * (#Piece_Size * Piece_Height + 10)
-    If i = FallingPieceWheel\PieceType
+    If CurrentPieceType = FallingPieceWheel\PieceType
       If Not FallingPieceWheel\ChoosedPiece
         ;just show the background behind the current piece
         DisplayTransparentSprite(FallingPieceWheel\CurrentPieceBackgroundSprite, x, y)
@@ -473,7 +473,7 @@ Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
       
     EndIf
     
-    DisplayTransparentSprite(FallingPieceWheelSprites(i), x, y)
+    DisplayTransparentSprite(FallingPieceWheelSprites(CurrentPieceType), x, y)
   Next
   
   
