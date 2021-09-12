@@ -11,6 +11,7 @@
 #Falling_Piece_Wheel_Timer = 0.75
 ;#Falling_Piece_Position_Timer = 0.2
 #Falling_Piece_Position_Timer = 0.75
+#Completed_Line_Score = 100
 
 EnumerationBinary TPieceInfo
   #Empty
@@ -103,8 +104,8 @@ Structure TPlayField
   FallingPieceWheel.TFallingPieceWheel
   FallingPiece.TFallingPiece
   CompletedLines.TCompletedLines
+  Score.l
 EndStructure
-
 
 Global ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
@@ -457,7 +458,7 @@ Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
     Protected Column.a = CurrentPieceType % 2
     Protected Line.a = CurrentPieceType / 2
     x = *PlayField\x + *PlayField\Width + 10 + Column * (#Piece_Size * Piece_Width + 10)
-    y = 0 + 10 + Line * (#Piece_Size * Piece_Height + 10)
+    y = *PlayField\y + 30 + Line * (#Piece_Size * Piece_Height + 10)
     If CurrentPieceType = FallingPieceWheel\PieceType
       If Not FallingPieceWheel\ChoosedPiece
         ;just show the background behind the current piece
@@ -485,10 +486,9 @@ Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
 EndProcedure
 
 
-Procedure DrawPlayFieldOutline()
-  ;LineXY(PlayField\x + 1, PlayField\y + 1, #PlayFieldSize_Width * #Piece_Width, PlayField\y, RGB($7f, 80, 70))
-  Line(PlayField\x + 1, PlayField\y + 1, #PlayFieldSize_Width * Piece_Width, 1, RGB($7f, 80, 70))
-  Line(PlayField\x + #PlayFieldSize_Width * Piece_Width, 1, 1, #PlayFieldSize_Height * Piece_Height, RGB($7f, 80, 70))
+Procedure DrawPlayFieldOutline(*Playfield.TPlayField)
+  Line(*PlayField\x + 1, *PlayField\y + 1, #PlayFieldSize_Width * Piece_Width, 1, RGB($7f, 80, 70))
+  Line(*PlayField\x + #PlayFieldSize_Width * Piece_Width, 1, 1, #PlayFieldSize_Height * Piece_Height, RGB($7f, 80, 70))
 EndProcedure
 
 Procedure DrawFallingPiecePosition(*PLayField.TPlayField)
@@ -503,6 +503,14 @@ Procedure DrawFallingPiecePosition(*PLayField.TPlayField)
     DisplayTransparentSprite(FallingPiecePositionSprite, FallingPiecePosition\Column * Piece_Width, 0)
   EndIf
   
+EndProcedure
+
+Procedure DrawPlayFieldScore(*PlayField.TPlayField)
+  StartDrawing(ScreenOutput())
+  DrawingMode(#PB_2DDrawing_Transparent)
+  Protected ScoreText.s = "Score:" + Str(*PlayField\Score)
+  DrawText(*PlayField\x + *PlayField\Width + 5, *PlayField\y + 5, ScoreText, RGB($FF, $cc, $33))
+  StopDrawing()
 EndProcedure
 
 Procedure Draw(*PLayField.TPlayField)
@@ -525,9 +533,11 @@ Procedure Draw(*PLayField.TPlayField)
   
   DrawFallingPiece(*PLayField)
   
-  DrawPlayFieldOutline()
+  DrawPlayFieldOutline(*PLayField)
   
   StopDrawing()
+  
+  DrawPlayFieldScore(*PLayField)
   
   DrawFallingPieceWheel(*PlayField)
   
@@ -763,6 +773,12 @@ Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
     BringPlayFieldOneLineDown(*PLayField, CurrentLine - 1)
     If Not CheckCompletedLines(*PLayField)
       Debug "sequential completed lines:" + Str(*PLayField\CompletedLines\SequentialCompletedLines)
+      *PLayField\Score + *PLayField\CompletedLines\SequentialCompletedLines * #Completed_Line_Score
+      If *PLayField\CompletedLines\SequentialCompletedLines > 1
+        ;bonus score
+        *PLayField\Score + (*PLayField\CompletedLines\SequentialCompletedLines - 1) * (#Completed_Line_Score / 4)
+      EndIf
+      
       ClearPlayFieldCompletedLines(*PLayField)
       ChangeGameState(*PLayField, #ChoosingFallingPiecePosition)
     EndIf
