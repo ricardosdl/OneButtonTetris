@@ -473,7 +473,12 @@ Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
       
     EndIf
     
-    DisplayTransparentSprite(FallingPieceWheelSprites(CurrentPieceType), x, y)
+    Protected WidthInPieces.a = PiecesConfiguration(CurrentPieceType)\WidthInPieces
+    Protected HeightInPieces.a = PiecesConfiguration(CurrentPieceType)\HeightInPieces
+    
+    Protected SpriteX = x + (#Piece_Size * Piece_Width / 2) - (WidthInPieces * Piece_Width / 2)
+    Protected SpriteY = y + (#Piece_Size * Piece_Height / 2) - (HeightInPieces * Piece_Height / 2)
+    DisplayTransparentSprite(FallingPieceWheelSprites(CurrentPieceType), SpriteX, SpriteY)
   Next
   
   
