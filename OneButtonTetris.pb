@@ -480,7 +480,11 @@ Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
     Protected SpriteX = x + (#Piece_Size * Piece_Width / 2) - (WidthInPieces * Piece_Width / 2)
     Protected SpriteY = y + (#Piece_Size * Piece_Height / 2) - (HeightInPieces * Piece_Height / 2)
     DisplayTransparentSprite(FallingPieceWheelSprites(CurrentPieceType), SpriteX, SpriteY)
+    Debug "falling piece wheel x:" + x
+    Debug "falling piece wheel y:" + y
+    Debug "==========="
   Next
+  ;CallDebugger
   
   
 EndProcedure
