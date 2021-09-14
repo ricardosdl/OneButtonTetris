@@ -12,6 +12,9 @@
 ;#Falling_Piece_Position_Timer = 0.2
 #Falling_Piece_Position_Timer = 0.75
 #Completed_Line_Score = 100
+#Max_PlayFields = 4
+#FallingPieceWheel_Pieces_Per_Column = 2
+#FallingPieceWheel_Pieces_Per_Line = 2
 
 EnumerationBinary TPieceInfo
   #Empty
@@ -113,7 +116,8 @@ Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
 Global Piece_Width.w, Piece_Height.w
 Global PlayField.TPlayField, FallingPiece.TFallingPiece, FallingPieceWheel.TFallingPieceWheel,
        FallingPiecePosition.TFallingPiecePosition
-Global GameState.a
+Global Dim PlayFields.TPlayField(#Max_PlayFields - 1)
+Global GameState.a, NumPlayers.a = 1
 Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
 Global Dim FallingPieceWheelSprites(#Right4), FallingPiecePositionSprite.i = #False
 Global SpaceKeyReleased.i = #False
@@ -131,6 +135,23 @@ Procedure StringListToAsciiList(StringList.s, List AsciiList.a(), Separator.s = 
     AsciiList() = Val(StringField(StringList, i, Separator))
   Next i
 EndProcedure
+
+Procedure.a SetupNumPlayers()
+  Protected TextNumPlayers.s = InputRequester("Number of Players", "Type the number of players (1-4)", "1")
+  TextNumPlayers = Trim(TextNumPlayers)
+  NumPlayers = Val(TextNumPlayers)
+  If NumPlayers <= 0
+    NumPlayers = 1
+  EndIf
+  
+  If NumPlayers > 4
+    NumPlayers = 4
+  EndIf
+  
+  ProcedureReturn NumPlayers
+  
+EndProcedure
+
 
 Procedure InitFallingPiecePosition(*PlayField.TPlayField)
   Protected *FallingPiecePosition.TFallingPiecePosition = *PlayField\FallingPiecePosition
@@ -213,9 +234,9 @@ Procedure ChangeGameState(*PlayField.TPlayField, NewState.a)
   
 EndProcedure
 
-Procedure InitPlayField(*PlayField.TPlayField)
-  *PlayField\x = 0
-  *PlayField\y = 0
+Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f)
+  *PlayField\x = PosX
+  *PlayField\y = PosY
   Protected.u x, y
   For x = 0 To #PlayFieldSize_Width - 1
     For y = 0 To #PlayFieldSize_Height - 1
@@ -226,8 +247,41 @@ Procedure InitPlayField(*PlayField.TPlayField)
   *PlayField\Width = #PlayFieldSize_Width * Piece_Width
   *PlayField\Height = #PlayFieldSize_Height * Piece_Height
   ClearPlayFieldCompletedLines(*PlayField)
+  *PlayField\Score = 0
   ;*PlayField\GameState = #ChoosingFallingPiecePosition
   ChangeGameState(*PlayField, #ChoosingFallingPiecePosition)
+  
+EndProcedure
+
+Procedure SetupFallingPieceWheel(*PlayField.TPlayField)
+  Protected *FallingPieceWheel.TFallingPieceWheel = @*PlayField\FallingPieceWheel
+  InitFallingPieceWheel(*PlayField)
+  *FallingPieceWheel\x = *PlayField\x + *PlayField\Width + 10
+  *FallingPieceWheel\y = *PlayField\y + *PlayField\Height / 2 - (#Piece_Size * Piece_Height) / 2
+  *FallingPieceWheel\CurrentPieceBackgroundSprite = CreateSprite(#PB_Any, #Piece_Size * Piece_Width, #Piece_Size * Piece_Height,
+                                                                 #PB_Sprite_AlphaBlending)
+  If *FallingPieceWheel\CurrentPieceBackgroundSprite <> 0
+    StartDrawing(SpriteOutput(*FallingPieceWheel\CurrentPieceBackgroundSprite))
+    Box(0, 0, #Piece_Size * Piece_Width, #Piece_Size * Piece_Height, RGB(255, 255, 255))
+    StopDrawing()
+  EndIf
+  
+EndProcedure
+
+Procedure InitPlayFields(NumPlayers.a, Array PlayFields.TPlayField(1))
+  SetupPlayFieldSizes(NumPlayers)
+  Protected i.a
+  For i = 1 To NumPlayers
+    Protected PosX.f, PosY
+    Protected FallingPieceWheelWidth.f = 10 + (#FallingPieceWheel_Pieces_Per_Column - 1) * (#Piece_Size * Piece_Width + 10)
+    Protected Column.a = (i - 1) % 2
+    PosX = 0 + Column * ((#PlayFieldSize_Width * Piece_Width) + FallingPieceWheelWidth )
+    
+    Protected Line.a = (i - 1) / 2
+    PosY = Line * (#PlayFieldSize_Height * Piece_Height)
+    InitPlayField(@PlayFields(i - 1), PosX, PosY)
+    SetupFallingPieceWheel(@PlayFields(i - 1))
+  Next
   
 EndProcedure
 
@@ -295,24 +349,6 @@ Procedure CreateFallingPieceWheelSprites()
   Next
   
 EndProcedure
-
-Procedure SetupFallingPieceWheel(*PlayField.TPlayField)
-  Protected *FallingPieceWheel.TFallingPieceWheel = @*PlayField\FallingPieceWheel
-  InitFallingPieceWheel(*PlayField)
-  *FallingPieceWheel\x = *PlayField\x + *PlayField\Width + 10
-  *FallingPieceWheel\y = *PlayField\y + *PlayField\Height / 2 - (#Piece_Size * Piece_Height) / 2
-  *FallingPieceWheel\CurrentPieceBackgroundSprite = CreateSprite(#PB_Any, #Piece_Size * Piece_Width, #Piece_Size * Piece_Height,
-                                                                 #PB_Sprite_AlphaBlending)
-  If *FallingPieceWheel\CurrentPieceBackgroundSprite <> 0
-    StartDrawing(SpriteOutput(*FallingPieceWheel\CurrentPieceBackgroundSprite))
-    Box(0, 0, #Piece_Size * Piece_Width, #Piece_Size * Piece_Height, RGB(255, 255, 255))
-    StopDrawing()
-  EndIf
-  
-EndProcedure
-
-
-
 
 Procedure SavePieceTemplate(List PieceLines.s(), CurrentPieceTemplate.a)
   Protected PieceTemplateLine.a = 0
@@ -455,8 +491,8 @@ Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
   Protected FallingPieceWheel.TFallingPieceWheel = *PlayField\FallingPieceWheel
   Protected CurrentPieceType.a, x.f, y.f
   For CurrentPieceType = #Line To #Right4
-    Protected Column.a = CurrentPieceType % 2
-    Protected Line.a = CurrentPieceType / 2
+    Protected Column.a = CurrentPieceType % #FallingPieceWheel_Pieces_Per_Column
+    Protected Line.a = CurrentPieceType / #FallingPieceWheel_Pieces_Per_Line
     x = *PlayField\x + *PlayField\Width + 10 + Column * (#Piece_Size * Piece_Width + 10)
     y = *PlayField\y + 30 + Line * (#Piece_Size * Piece_Height + 10)
     If CurrentPieceType = FallingPieceWheel\PieceType
@@ -480,9 +516,11 @@ Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
     Protected SpriteX = x + (#Piece_Size * Piece_Width / 2) - (WidthInPieces * Piece_Width / 2)
     Protected SpriteY = y + (#Piece_Size * Piece_Height / 2) - (HeightInPieces * Piece_Height / 2)
     DisplayTransparentSprite(FallingPieceWheelSprites(CurrentPieceType), SpriteX, SpriteY)
-    Debug "falling piece wheel x:" + x
-    Debug "falling piece wheel y:" + y
-    Debug "==========="
+    ;Debug "falling piece wheel x:" + x
+    ;Debug "falling piece wheel y:" + y
+    ;Debug "background sprite w:" + SpriteWidth(FallingPieceWheel\CurrentPieceBackgroundSprite)
+    ;Debug "background sprite h:" + SpriteHeight(FallingPieceWheel\CurrentPieceBackgroundSprite)
+    ;Debug "==========="
   Next
   ;CallDebugger
   
@@ -547,6 +585,15 @@ Procedure Draw(*PLayField.TPlayField)
   
   
 EndProcedure
+
+Procedure DrawPlayFields()
+  Protected i.a
+  For i = 1 To NumPlayers
+    Draw(@PlayFields(i - 1))
+  Next
+  
+EndProcedure
+
 
 Procedure.a CheckCompletedLines(*PlayField.TPlayField)
   ;we go on each line in the playfield trying to find a completed line
@@ -800,10 +847,15 @@ EndProcedure
 
 Procedure Update(Elapsed.f)
   CheckKeys()
-  UpdateFallingPiece(@PlayField, Elapsed)
-  UpdateFallingPieceWheel(@PlayField, Elapsed)
-  UpdateFallingPiecePosition(@PlayField, Elapsed)
-  UpdateScoringCompletedLines(@PlayField, Elapsed)
+  Protected i.a
+  For i = 1 To NumPlayers
+    UpdateFallingPiece(@PlayFields(i - 1), Elapsed)
+    UpdateFallingPieceWheel(@PlayFields(i - 1), Elapsed)
+    UpdateFallingPiecePosition(@PlayFields(i - 1), Elapsed)
+    UpdateScoringCompletedLines(@PlayFields(i - 1), Elapsed)
+  Next i
+  
+  
 EndProcedure
 
 
@@ -811,18 +863,22 @@ EndProcedure
 InitSprite()
 InitKeyboard()
 
+SetupNumPlayers()
+Debug NumPlayers
+
 OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One Button Tetris", #PB_Window_ScreenCentered)
 OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
 
 LoadPiecesTemplate()
 LoadPiecesConfigurations()
-SetupPlayFieldSizes(1)
-InitPlayField(@PlayField)
-SetupFallingPieceWheel(@PlayField)
+;SetupPlayFieldSizes(NumPlayers)
+;InitPlayField(@PlayField, 0, 0)
+InitPlayFields(NumPlayers, PlayFields())
+;SetupFallingPieceWheel(@PlayField)
 CreateFallingPieceWheelSprites()
 CreateFallingPiecePositionSprite()
 
-ChangeGameState(@PlayField, #ChoosingFallingPiecePosition)
+;ChangeGameState(@PlayField, #ChoosingFallingPiecePosition)
 
 LastTimeInMs = ElapsedMilliseconds()
 ;LaunchRandomFallingPiece()
@@ -838,7 +894,7 @@ Repeat
   
   ;Draw
   ClearScreen(#Black)
-  Draw(@PlayField)
+  DrawPlayFields()
   
   
   FlipBuffers()
