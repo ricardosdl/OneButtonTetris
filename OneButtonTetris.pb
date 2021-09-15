@@ -536,13 +536,13 @@ EndProcedure
 Procedure DrawFallingPiecePosition(*PLayField.TPlayField)
   Protected FallingPiecePosition.TFallingPiecePosition = *PLayField\FallingPiecePosition
   If Not FallingPiecePosition\ChoosedPosition
-    DisplayTransparentSprite(FallingPiecePositionSprite, FallingPiecePosition\Column * Piece_Width, 0)
+    DisplayTransparentSprite(FallingPiecePositionSprite, *PlayField\x + FallingPiecePosition\Column * Piece_Width, *PLayField\y)
   ElseIf FallingPiecePosition\ChoosedPositionTimer > 0
     Protected Timer.l = (FallingPiecePosition\ChoosedPositionTimer * 1000) / 50
     Protected Intensity = 255 * (Timer % 2)
-    DisplayTransparentSprite(FallingPiecePositionSprite, FallingPiecePosition\Column * Piece_Width, 0, Intensity)
+    DisplayTransparentSprite(FallingPiecePositionSprite, *PLayField\x + FallingPiecePosition\Column * Piece_Width, *PLayField\y, Intensity)
   ElseIf FallingPiecePosition\ChoosedPositionTimer <= 0
-    DisplayTransparentSprite(FallingPiecePositionSprite, FallingPiecePosition\Column * Piece_Width, 0)
+    DisplayTransparentSprite(FallingPiecePositionSprite, *PLayField\x + FallingPiecePosition\Column * Piece_Width, *PLayField\y)
   EndIf
   
 EndProcedure
