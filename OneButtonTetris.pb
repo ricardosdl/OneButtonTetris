@@ -80,6 +80,8 @@ Structure TFallingPieceWheel
   CurrentPieceBackgroundSprite.i
   ChoosedPiece.a
   ChoosedPieceTimer.f
+  Width.f
+  Height.f
 EndStructure
 
 Structure TFallingPiecePosition
@@ -162,8 +164,7 @@ Procedure InitFallingPiecePosition(*PlayField.TPlayField)
   
 EndProcedure
 
-Procedure InitFallingPieceWheel(*PlayField.TPlayField)
-  Protected *FallingPieceWheel.TFallingPieceWheel = *PlayField\FallingPieceWheel
+Procedure InitFallingPieceWheel(*FallingPieceWheel.TFallingPieceWheel)
   *FallingPieceWheel\CurrentTimer = 0
   *FallingPieceWheel\PieceType = Random(#Right4, #Line)
   *FallingPieceWheel\ChoosedPiece = #False
@@ -253,11 +254,10 @@ Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f)
   
 EndProcedure
 
-Procedure SetupFallingPieceWheel(*PlayField.TPlayField)
-  Protected *FallingPieceWheel.TFallingPieceWheel = @*PlayField\FallingPieceWheel
-  InitFallingPieceWheel(*PlayField)
-  *FallingPieceWheel\x = *PlayField\x + *PlayField\Width + 10
-  *FallingPieceWheel\y = *PlayField\y + *PlayField\Height / 2 - (#Piece_Size * Piece_Height) / 2
+Procedure SetupFallingPieceWheel(*FallingPieceWheel.TFallingPieceWheel, PosX.f, PosY.f)
+  InitFallingPieceWheel(*FallingPieceWheel)
+  *FallingPieceWheel\x = PosX
+  *FallingPieceWheel\y = PosY
   *FallingPieceWheel\CurrentPieceBackgroundSprite = CreateSprite(#PB_Any, #Piece_Size * Piece_Width, #Piece_Size * Piece_Height,
                                                                  #PB_Sprite_AlphaBlending)
   If *FallingPieceWheel\CurrentPieceBackgroundSprite <> 0
@@ -280,7 +280,7 @@ Procedure InitPlayFields(NumPlayers.a, Array PlayFields.TPlayField(1))
     Protected Line.a = (i - 1) / 2
     PosY = Line * (#PlayFieldSize_Height * Piece_Height)
     InitPlayField(@PlayFields(i - 1), PosX, PosY)
-    SetupFallingPieceWheel(@PlayFields(i - 1))
+    SetupFallingPieceWheel(@PlayFields(i - 1)\FallingPieceWheel, 0, 0)
   Next
   
 EndProcedure
