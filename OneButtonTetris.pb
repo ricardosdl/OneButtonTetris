@@ -525,13 +525,7 @@ Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
     Protected SpriteX = x + (#Piece_Size * Piece_Width / 2) - (WidthInPieces * Piece_Width / 2)
     Protected SpriteY = y + (#Piece_Size * Piece_Height / 2) - (HeightInPieces * Piece_Height / 2)
     DisplayTransparentSprite(FallingPieceWheelSprites(CurrentPieceType), SpriteX, SpriteY)
-    ;Debug "falling piece wheel x:" + x
-    ;Debug "falling piece wheel y:" + y
-    ;Debug "background sprite w:" + SpriteWidth(FallingPieceWheel\CurrentPieceBackgroundSprite)
-    ;Debug "background sprite h:" + SpriteHeight(FallingPieceWheel\CurrentPieceBackgroundSprite)
-    ;Debug "==========="
   Next
-  ;CallDebugger
   
   
 EndProcedure
@@ -539,7 +533,7 @@ EndProcedure
 
 Procedure DrawPlayFieldOutline(*Playfield.TPlayField)
   Line(*PlayField\x + 1, *PlayField\y + 1, #PlayFieldSize_Width * Piece_Width, 1, RGB($7f, 80, 70))
-  Line(*PlayField\x + #PlayFieldSize_Width * Piece_Width, 1, 1, #PlayFieldSize_Height * Piece_Height, RGB($7f, 80, 70))
+  Line(*PlayField\x + #PlayFieldSize_Width * Piece_Width, *PlayField\y + 1, 1, #PlayFieldSize_Height * Piece_Height, RGB($7f, 80, 70))
 EndProcedure
 
 Procedure DrawFallingPiecePosition(*PLayField.TPlayField)
@@ -654,7 +648,6 @@ Procedure SaveFallingPieceOnPlayField(*PlayField.TPlayField)
   
   ClearPlayFieldCompletedLines(*PlayField)
   If CheckCompletedLines(*PlayField)
-    ;Debug "completed " + Str(ListSize(*PlayField\CompletedLines\CompletedLines())) + " lines"
     ChangeGameState(*PlayField, #ScoringCompletedLines)
   Else
     ChangeGameState(*PlayField, #ChoosingFallingPiecePosition)
@@ -873,7 +866,6 @@ InitSprite()
 InitKeyboard()
 
 SetupNumPlayers()
-Debug NumPlayers
 
 OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One Button Tetris", #PB_Window_ScreenCentered)
 OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
