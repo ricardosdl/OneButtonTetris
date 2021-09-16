@@ -107,6 +107,7 @@ Structure TPlayField
   FallingPiece.TFallingPiece
   CompletedLines.TCompletedLines
   Score.l
+  PlayerID.a
 EndStructure
 
 Global ElapsedTimneInS.f, LastTimeInMs.q
@@ -226,7 +227,7 @@ Procedure ChangeGameState(*PlayField.TPlayField, NewState.a)
   
 EndProcedure
 
-Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f)
+Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f, PlayerID.a)
   *PlayField\x = PosX
   *PlayField\y = PosY
   Protected.u x, y
@@ -240,6 +241,7 @@ Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f)
   *PlayField\Height = #PlayFieldSize_Height * Piece_Height
   ClearPlayFieldCompletedLines(*PlayField)
   *PlayField\Score = 0
+  *PlayField\PlayerID = PlayerID
   ;*PlayField\GameState = #ChoosingFallingPiecePosition
   ChangeGameState(*PlayField, #ChoosingFallingPiecePosition)
   
@@ -280,7 +282,7 @@ Procedure InitPlayFields(NumPlayers.a, Array PlayFields.TPlayField(1))
     
     Protected Line.a = (i - 1) / 2
     PosY = Line * (#PlayFieldSize_Height * Piece_Height)
-    InitPlayField(@PlayFields(i - 1), PosX, PosY)
+    InitPlayField(@PlayFields(i - 1), PosX, PosY, i)
     SetupFallingPieceWheel(@PlayFields(i - 1)\FallingPieceWheel, 0, 0)
   Next
   
@@ -472,7 +474,7 @@ Procedure DrawFallingPiece(*PlayField.TPlayField)
       Protected CellX.w = x + i
       Protected CellY.w = y + j
       If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j) And IsCellWithinPlayField(CellX, CellY)
-        Box(x * Piece_Width + i * Piece_Width, y * Piece_Height + j * Piece_Height, Piece_Width - 1, Piece_Height - 1, RGB($7f, 0, 0))
+        Box(*PlayField\x + x * Piece_Width + i * Piece_Width, *PlayField\y + y * Piece_Height + j * Piece_Height, Piece_Width - 1, Piece_Height - 1, RGB($7f, 0, 0))
       EndIf
       
     Next j
@@ -531,10 +533,10 @@ Procedure DrawFallingPiecePosition(*PLayField.TPlayField)
   
 EndProcedure
 
-Procedure DrawPlayFieldScore(*PlayField.TPlayField)
+Procedure DrawPlayFieldHUD(*PlayField.TPlayField)
   StartDrawing(ScreenOutput())
   DrawingMode(#PB_2DDrawing_Transparent)
-  Protected ScoreText.s = "Score:" + Str(*PlayField\Score)
+  Protected ScoreText.s = "Player " + *PlayField\PlayerID + " Score:" + Str(*PlayField\Score)
   DrawText(*PlayField\x + *PlayField\Width + 5, *PlayField\y + 5, ScoreText, RGB($FF, $cc, $33))
   StopDrawing()
 EndProcedure
@@ -562,7 +564,7 @@ Procedure Draw(*PLayField.TPlayField)
   
   StopDrawing()
   
-  DrawPlayFieldScore(*PLayField)
+  DrawPlayFieldHUD(*PLayField)
   
   DrawFallingPieceWheel(*PlayField)
 EndProcedure
