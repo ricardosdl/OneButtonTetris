@@ -183,8 +183,6 @@ Procedure ClearPlayFieldCompletedLines(*PlayField.TPlayField)
   *PlayField\CompletedLines\CompletedLine = -1
   *PlayField\CompletedLines\CurrentColumn = -1
   *PlayField\CompletedLines\SequentialCompletedLines = 0
-  ;ClearList(*PlayField\CompletedLines\CompletedLines())
-  ;*PlayField\CompletedLines\CurrentColumn = -1
 EndProcedure
 
 Procedure.a SetupPlayFieldSizes(NumPlayers.a)
@@ -218,7 +216,7 @@ Procedure ChangeGameState(*PlayField.TPlayField, NewState.a)
   Select NewState
     Case #ChoosingFallingPiecePosition
       InitFallingPiecePosition(*PlayField)
-      InitFallingPieceWheel(*PlayField)
+      InitFallingPieceWheel(@*PlayField\FallingPieceWheel)
       *PlayField\GameState = NewState
       
     Case #WaitingFallingPiece
@@ -254,12 +252,22 @@ Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f)
   
 EndProcedure
 
+Macro GetFallingPieceWheelWidth(Width)
+  Width = #FallingPieceWheel_Pieces_Per_Column * #Piece_Size * Piece_Width
+EndMacro
+
 Procedure SetupFallingPieceWheel(*FallingPieceWheel.TFallingPieceWheel, PosX.f, PosY.f)
   InitFallingPieceWheel(*FallingPieceWheel)
   *FallingPieceWheel\x = PosX
   *FallingPieceWheel\y = PosY
-  *FallingPieceWheel\CurrentPieceBackgroundSprite = CreateSprite(#PB_Any, #Piece_Size * Piece_Width, #Piece_Size * Piece_Height,
+  If IsSprite(*FallingPieceWheel\CurrentPieceBackgroundSprite) = 0
+    *FallingPieceWheel\CurrentPieceBackgroundSprite = CreateSprite(#PB_Any, #Piece_Size * Piece_Width, #Piece_Size * Piece_Height,
                                                                  #PB_Sprite_AlphaBlending)
+  EndIf
+  
+  ;*FallingPieceWheel\Width = #FallingPieceWheel_Pieces_Per_Column * #Piece_Size * Piece_Width
+  GetFallingPieceWheelWidth(*FallingPieceWheel\Width)
+  
   If *FallingPieceWheel\CurrentPieceBackgroundSprite <> 0
     StartDrawing(SpriteOutput(*FallingPieceWheel\CurrentPieceBackgroundSprite))
     Box(0, 0, #Piece_Size * Piece_Width, #Piece_Size * Piece_Height, RGB(255, 255, 255))
@@ -273,9 +281,10 @@ Procedure InitPlayFields(NumPlayers.a, Array PlayFields.TPlayField(1))
   Protected i.a
   For i = 1 To NumPlayers
     Protected PosX.f, PosY
-    Protected FallingPieceWheelWidth.f = 10 + (#FallingPieceWheel_Pieces_Per_Column - 1) * (#Piece_Size * Piece_Width + 10)
+    Protected FallingPieceWheelWidth.f
+    GetFallingPieceWheelWidth(FallingPieceWheelWidth)
     Protected Column.a = (i - 1) % 2
-    PosX = 0 + Column * ((#PlayFieldSize_Width * Piece_Width) + FallingPieceWheelWidth )
+    PosX = 0 + Column * ((#PlayFieldSize_Width * Piece_Width) + 25 + FallingPieceWheelWidth )
     
     Protected Line.a = (i - 1) / 2
     PosY = Line * (#PlayFieldSize_Height * Piece_Height)
