@@ -59,9 +59,6 @@ Structure TPieceConfiguration
   HeightInPieces.a
 EndStructure
 
-
-
-
 Structure TFallingPiece
   PosX.w
   PosY.w
@@ -204,11 +201,7 @@ Procedure.a SetupPlayFieldSizes(NumPlayers.a)
       Piece_Width = (#Game_Width / 4) / #PlayFieldSize_Width
       Piece_Height = #Game_Height / 2 / #PlayFieldSize_Height
       
-  EndSelect
-  
-  
-  
-  
+  EndSelect  
 EndProcedure
 
 Procedure ChangeGameState(*PlayField.TPlayField, NewState.a)
@@ -265,7 +258,6 @@ Procedure SetupFallingPieceWheel(*FallingPieceWheel.TFallingPieceWheel, PosX.f, 
                                                                  #PB_Sprite_AlphaBlending)
   EndIf
   
-  ;*FallingPieceWheel\Width = #FallingPieceWheel_Pieces_Per_Column * #Piece_Size * Piece_Width
   GetFallingPieceWheelWidth(*FallingPieceWheel\Width)
   
   If *FallingPieceWheel\CurrentPieceBackgroundSprite <> 0
@@ -323,10 +315,7 @@ Procedure CreateFallingPiecePositionSprite()
   StopDrawing()
   
   FallingPiecePositionSprite = Sprite
-  
-  
 EndProcedure
-
 
 Procedure CreateFallingPieceWheelSprites()
   Protected PieceType.a
@@ -437,9 +426,6 @@ Procedure LoadPiecesConfigurations()
   StringListToAsciiList("17,18", PiecesConfiguration(#Right4)\PieceTemplates())
   PiecesConfiguration(#Right4)\WidthInPieces = 3
   PiecesConfiguration(#Right4)\HeightInPieces = 2
-  
-  
-  
 EndProcedure
 
 Procedure.q GetPieceColor(PieceInfo.u)
@@ -492,8 +478,6 @@ Procedure DrawFallingPiece(*PlayField.TPlayField)
     Next j
     
   Next i
-  
-  
 EndProcedure
 
 Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
@@ -526,10 +510,7 @@ Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
     Protected SpriteY = y + (#Piece_Size * Piece_Height / 2) - (HeightInPieces * Piece_Height / 2)
     DisplayTransparentSprite(FallingPieceWheelSprites(CurrentPieceType), SpriteX, SpriteY)
   Next
-  
-  
 EndProcedure
-
 
 Procedure DrawPlayFieldOutline(*Playfield.TPlayField)
   Line(*PlayField\x + 1, *PlayField\y + 1, #PlayFieldSize_Width * Piece_Width, 1, RGB($7f, 80, 70))
@@ -561,7 +542,6 @@ EndProcedure
 Procedure Draw(*PLayField.TPlayField)
   DrawFallingPiecePosition(*PLayField)
   
-  
   Protected x.u, y.u
   StartDrawing(ScreenOutput())
   For x = 0 To #PlayFieldSize_Width - 1
@@ -585,8 +565,6 @@ Procedure Draw(*PLayField.TPlayField)
   DrawPlayFieldScore(*PLayField)
   
   DrawFallingPieceWheel(*PlayField)
-  
-  
 EndProcedure
 
 Procedure DrawPlayFields()
@@ -594,7 +572,6 @@ Procedure DrawPlayFields()
   For i = 1 To NumPlayers
     Draw(@PlayFields(i - 1))
   Next
-  
 EndProcedure
 
 
@@ -657,9 +634,6 @@ EndProcedure
 Procedure LaunchRandomFallingPiece()
   ;LaunchFallingPiece(Random(#Right4, #Line))
 EndProcedure
-
-
-
 
 Procedure UpdateFallingPiece(*PlayField.TPlayField, Elapsed.f)
   Protected *FallingPiece.TFallingPiece = @*PlayField\FallingPiece
@@ -752,8 +726,6 @@ Procedure UpdateFallingPieceWheel(*PlayField.TPlayField, Elapsed.f)
   If *FallingPieceWheel\ChoosedPiece And *FallingPieceWheel\ChoosedPieceTimer < 0
     ChangeGameState(*PlayField, #WaitingFallingPiece)
   EndIf
-  
-  
 EndProcedure
 
 Procedure CheckKeys()
@@ -773,7 +745,6 @@ Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
     *FallingPiecePosition\ChoosedPositionTimer = 0.5
   EndIf
   
-  
   If Not *FallingPiecePosition\ChoosedPosition
     *FallingPiecePosition\CurrentTimer + Elapsed
   EndIf
@@ -790,9 +761,6 @@ Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
   If *FallingPiecePosition\ChoosedPosition And *FallingPiecePosition\ChoosedPositionTimer <= 0
     ChangeGameState(*PlayField, #ChoosingFallingPiece)
   EndIf
-  
-  
-  
 EndProcedure
 
 Procedure BringPlayFieldOneLineDown(*PlayField.TPLayField, StartLine.b)
@@ -836,15 +804,6 @@ Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
       ChangeGameState(*PLayField, #ChoosingFallingPiecePosition)
     EndIf
   EndIf
-  
-  
-  
-  
-  
-  
-  
-  
-  
 EndProcedure
 
 Procedure Update(Elapsed.f)
@@ -856,33 +815,21 @@ Procedure Update(Elapsed.f)
     UpdateFallingPiecePosition(@PlayFields(i - 1), Elapsed)
     UpdateScoringCompletedLines(@PlayFields(i - 1), Elapsed)
   Next i
-  
-  
 EndProcedure
 
-
-
+;===================main program starts here================
 InitSprite()
 InitKeyboard()
-
 SetupNumPlayers()
-
 OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One Button Tetris", #PB_Window_ScreenCentered)
 OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
-
 LoadPiecesTemplate()
 LoadPiecesConfigurations()
-;SetupPlayFieldSizes(NumPlayers)
-;InitPlayField(@PlayField, 0, 0)
 InitPlayFields(NumPlayers, PlayFields())
-;SetupFallingPieceWheel(@PlayField)
 CreateFallingPieceWheelSprites()
 CreateFallingPiecePositionSprite()
 
-;ChangeGameState(@PlayField, #ChoosingFallingPiecePosition)
-
 LastTimeInMs = ElapsedMilliseconds()
-;LaunchRandomFallingPiece()
 
 Repeat
   ElapsedTimneInS = (ElapsedMilliseconds() - LastTimeInMs) / 1000.0
