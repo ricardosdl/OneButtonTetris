@@ -491,7 +491,7 @@ Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
     Protected Line.a = CurrentPieceType / #FallingPieceWheel_Pieces_Per_Line
     x = *PlayField\x + *PlayField\Width + 10 + Column * (#Piece_Size * Piece_Width + 10)
     y = *PlayField\y + 30 + Line * (#Piece_Size * Piece_Height + 10)
-    If CurrentPieceType = FallingPieceWheel\PieceType
+    If CurrentPieceType = FallingPieceWheel\PieceType And *PlayField\GameState <> #GameOver
       If Not FallingPieceWheel\ChoosedPiece
         ;just show the background behind the current piece
         DisplayTransparentSprite(FallingPieceWheel\CurrentPieceBackgroundSprite, x, y)
@@ -538,7 +538,11 @@ Procedure DrawPlayFieldHUD(*PlayField.TPlayField)
   StartDrawing(ScreenOutput())
   DrawingMode(#PB_2DDrawing_Transparent)
   Protected ScoreText.s = "Player " + *PlayField\PlayerID + " Score:" + Str(*PlayField\Score)
-  DrawText(*PlayField\x + *PlayField\Width + 5, *PlayField\y + 5, ScoreText, RGB($FF, $cc, $33))
+  DrawText(*PlayField\x + *PlayField\Width, *PlayField\y + 5, ScoreText, RGB($FF, $cc, $33))
+  If *PlayField\GameState = #GameOver
+    Protected TextHeightOffset = TextHeight(ScoreText)
+    DrawText(*PlayField\x + *PlayField\Width, *PlayField\y + 5 + TextHeightOffset, "GAME OVER", RGB(255, 25, 15))
+  EndIf
   StopDrawing()
 EndProcedure
 
@@ -622,6 +626,8 @@ Procedure SaveFallingPieceOnPlayField(*PlayField.TPlayField)
         If IsCellXWithinPlayfield And IsCellYAbovePlayfield
           ;game over
           Debug "game over"
+          *PlayField\GameState = #GameOver
+          ProcedureReturn
         EndIf
         
         
