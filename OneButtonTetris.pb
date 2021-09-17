@@ -614,6 +614,7 @@ Procedure SaveFallingPieceOnPlayField(*PlayField.TPlayField)
       If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j)
         Protected XCell.w = FallingPiece\PosX + i
         Protected YCell.w = FallingPiece\PosY + j
+        
         If Not IsCellWithinPlayField(XCell, YCell)
           Continue
         EndIf
@@ -656,10 +657,14 @@ Procedure UpdateFallingPiece(*PlayField.TPlayField, Elapsed.f)
       Break
     EndIf
     For j = 0 To #Piece_Size - 1
+      ;each piece is 4x4, if the current piece at the current configuration
+      ;is filled at this position, we'll check for collisions
       If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j)
         Protected XCell.w = *FallingPiece\PosX + i
         Protected YCell.w = *FallingPiece\PosY + j
-        If YCell > #PlayFieldSize_Height - 1
+        
+        Protected IsCellXWithinPlayfield.a = Bool(XCell >= 0 And XCell < #PlayFieldSize_Width)
+        If (YCell > #PlayFieldSize_Height - 1) And IsCellXWithinPlayfield
           ;hit bottom of playfield
           *FallingPiece\PosY - 1;put the fallingpiece one line above
           *FallingPiece\IsFalling = #False
@@ -667,6 +672,8 @@ Procedure UpdateFallingPiece(*PlayField.TPlayField, Elapsed.f)
           Break
         EndIf
         
+        ;if the cell position is outside of the playfield
+        ;we ignore it for collisions with filled cells
         If Not IsCellWithinPlayField(XCell, YCell)
           Continue
         EndIf
@@ -692,11 +699,6 @@ Procedure UpdateFallingPiece(*PlayField.TPlayField, Elapsed.f)
       *FallingPiece\FallingTimer = 0.0
     EndIf
   EndIf
-  
-  ;check collisions
-  
-  ;check collisions with the bottom
-  ;FallingPiece\
   
 EndProcedure
 
