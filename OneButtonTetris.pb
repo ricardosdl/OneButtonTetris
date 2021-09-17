@@ -44,6 +44,7 @@ Enumeration TGameState
   #ChoosingFallingPiecePosition
   #WaitingFallingPiece
   #ScoringCompletedLines
+  #GameOver
 EndEnumeration
 
 
@@ -614,6 +615,15 @@ Procedure SaveFallingPieceOnPlayField(*PlayField.TPlayField)
       If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j)
         Protected XCell.w = FallingPiece\PosX + i
         Protected YCell.w = FallingPiece\PosY + j
+        
+        Protected IsCellXWithinPlayfield.a = Bool(XCell >= 0 And XCell < #PlayFieldSize_Width)
+        Protected IsCellYAbovePlayfield.a = Bool(YCell < 0)
+        
+        If IsCellXWithinPlayfield And IsCellYAbovePlayfield
+          ;game over
+          Debug "game over"
+        EndIf
+        
         
         If Not IsCellWithinPlayField(XCell, YCell)
           Continue
