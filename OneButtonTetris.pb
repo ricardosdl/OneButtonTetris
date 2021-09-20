@@ -39,7 +39,7 @@ Enumeration TPieceType
 EndEnumeration
 #Num_Piece_Types = #Right4 + 1
 
-Enumeration TGameState
+Enumeration TPlayfieldState
   #ChoosingFallingPiece
   #ChoosingFallingPiecePosition
   #WaitingFallingPiece
@@ -47,6 +47,11 @@ Enumeration TGameState
   #GameOver
 EndEnumeration
 
+Enumeration TGameState
+  #StartMenu
+  #Playing
+  
+EndEnumeration
 
 Structure TPieceTemplate
   Array PieceTemplate.u(#Piece_Size - 1, #Piece_Size - 1)
@@ -102,7 +107,7 @@ Structure TPlayField
   Array PlayField.u(#PlayFieldSize_Width - 1, #PlayFieldSize_Height - 1)
   Width.f
   Height.f
-  GameState.a
+  State.a
   FallingPiecePosition.TFallingPiecePosition
   FallingPieceWheel.TFallingPieceWheel
   FallingPiece.TFallingPiece
@@ -207,23 +212,23 @@ Procedure.a SetupPlayFieldSizes(NumPlayers.a)
 EndProcedure
 
 Procedure ChangeGameState(*PlayField.TPlayField, NewState.a)
-  Protected OldGameState.a = *PlayField\GameState
+  Protected OldGameState.a = *PlayField\State
   Select NewState
     Case #ChoosingFallingPiecePosition
       InitFallingPiecePosition(*PlayField)
       InitFallingPieceWheel(@*PlayField\FallingPieceWheel)
-      *PlayField\GameState = NewState
+      *PlayField\State = NewState
       
     Case #WaitingFallingPiece
       LaunchFallingPiece(*PlayField, *PlayField\FallingPieceWheel\PieceType, *PlayField\FallingPiecePosition\Column)
-      *PlayField\GameState = NewState
+      *PlayField\State = NewState
       
     Case #ChoosingFallingPiece
-      *PlayField\GameState = #ChoosingFallingPiece
+      *PlayField\State = #ChoosingFallingPiece
       
     Case #ScoringCompletedLines
       *PlayField\CompletedLines\CurrentColumn = #PlayFieldSize_Width - 1
-      *PlayField\GameState = #ScoringCompletedLines
+      *PlayField\State = #ScoringCompletedLines
   EndSelect
   
 EndProcedure
@@ -491,7 +496,7 @@ Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
     Protected Line.a = CurrentPieceType / #FallingPieceWheel_Pieces_Per_Line
     x = *PlayField\x + *PlayField\Width + 10 + Column * (#Piece_Size * Piece_Width + 10)
     y = *PlayField\y + 30 + Line * (#Piece_Size * Piece_Height + 10)
-    If CurrentPieceType = FallingPieceWheel\PieceType And *PlayField\GameState <> #GameOver
+    If CurrentPieceType = FallingPieceWheel\PieceType And *PlayField\State <> #GameOver
       If Not FallingPieceWheel\ChoosedPiece
         ;just show the background behind the current piece
         DisplayTransparentSprite(FallingPieceWheel\CurrentPieceBackgroundSprite, x, y)
@@ -539,7 +544,7 @@ Procedure DrawPlayFieldHUD(*PlayField.TPlayField)
   DrawingMode(#PB_2DDrawing_Transparent)
   Protected ScoreText.s = "Player " + *PlayField\PlayerID + " Score:" + Str(*PlayField\Score)
   DrawText(*PlayField\x + *PlayField\Width, *PlayField\y + 5, ScoreText, RGB($FF, $cc, $33))
-  If *PlayField\GameState = #GameOver
+  If *PlayField\State = #GameOver
     Protected TextHeightOffset = TextHeight(ScoreText)
     DrawText(*PlayField\x + *PlayField\Width, *PlayField\y + 5 + TextHeightOffset, "GAME OVER", RGB(255, 25, 15))
   EndIf
@@ -626,7 +631,7 @@ Procedure SaveFallingPieceOnPlayField(*PlayField.TPlayField)
         If IsCellXWithinPlayfield And IsCellYAbovePlayfield
           ;game over
           Debug "game over"
-          *PlayField\GameState = #GameOver
+          *PlayField\State = #GameOver
           ProcedureReturn
         EndIf
         
@@ -719,7 +724,7 @@ Procedure UpdateFallingPiece(*PlayField.TPlayField, Elapsed.f)
 EndProcedure
 
 Procedure UpdateFallingPieceWheel(*PlayField.TPlayField, Elapsed.f)
-  If *PlayField\GameState <> #ChoosingFallingPiece
+  If *PlayField\State <> #ChoosingFallingPiece
     ProcedureReturn
   EndIf
   
@@ -754,7 +759,7 @@ Procedure CheckKeys()
 EndProcedure
 
 Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
-  If *PlayField\GameState <> #ChoosingFallingPiecePosition
+  If *PlayField\State <> #ChoosingFallingPiecePosition
     ProcedureReturn
   EndIf
   
@@ -795,7 +800,7 @@ Procedure BringPlayFieldOneLineDown(*PlayField.TPLayField, StartLine.b)
 EndProcedure
 
 Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
-  If *PLayField\GameState <> #ScoringCompletedLines
+  If *PLayField\State <> #ScoringCompletedLines
     ProcedureReturn
   EndIf
   
