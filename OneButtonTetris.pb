@@ -50,7 +50,7 @@ EndEnumeration
 Enumeration TGameState
   #StartMenu
   #Playing
-  
+  #Paused
 EndEnumeration
 
 Structure TPieceTemplate
@@ -116,6 +116,12 @@ Structure TPlayField
   PlayerID.a
 EndStructure
 
+Structure TStartMenu
+  StartMenuTitleSprite.i
+  NumPlayers.a
+EndStructure
+
+
 Global ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
 ;holds the current pieces widht and height (according to the number of players)
@@ -126,6 +132,7 @@ Global Dim PlayFields.TPlayField(#Max_PlayFields - 1)
 Global GameState.a, NumPlayers.a = 1
 Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
 Global Dim FallingPieceWheelSprites(#Right4), FallingPiecePositionSprite.i = #False
+Global StartMenu.TStartMenu
 Global SpaceKeyReleased.i = #False
 
 ;Reads a list of integers separated by Separator and put them on IntegerList()
@@ -150,14 +157,36 @@ Procedure.a SetupNumPlayers()
     NumPlayers = 1
   EndIf
   
-  If NumPlayers > 4
-    NumPlayers = 4
+  If NumPlayers > #Max_PlayFields
+    NumPlayers = #Max_PlayFields
   EndIf
   
   ProcedureReturn NumPlayers
   
 EndProcedure
 
+Procedure.a LoadStartMenuTitleSprite()
+  If Not IsSprite(StartMenu\StartMenuTitleSprite)
+    StartMenu\StartMenuTitleSprite = LoadSprite(#PB_Any, "assets\gfx\startmenu-title.png", #PB_Sprite_AlphaBlending)
+  EndIf
+  
+  If StartMenu\StartMenuTitleSprite = 0
+    ProcedureReturn #False
+  EndIf
+  
+  ProcedureReturn #True
+  
+  
+EndProcedure
+
+Procedure InitStartMenu(NumPlayers.a = 1)
+  StartMenu\NumPlayers = NumPlayers
+EndProcedure
+
+Procedure SetupStartMenu()
+  LoadStartMenuTitleSprite()
+  InitStartMenu()
+EndProcedure
 
 Procedure InitFallingPiecePosition(*PlayField.TPlayField)
   Protected *FallingPiecePosition.TFallingPiecePosition = *PlayField\FallingPiecePosition
@@ -310,6 +339,10 @@ Procedure.a GetPieceTemplateIdx(PieceType.a, Configuration.a)
 EndProcedure
 
 Procedure CreateFallingPiecePositionSprite()
+  If IsSprite(FallingPiecePositionSprite)
+    FreeSprite(FallingPiecePositionSprite)
+  EndIf
+  
   Protected Sprite = CreateSprite(#PB_Any, Piece_Width, #PlayFieldSize_Height * Piece_Height, #PB_Sprite_AlphaBlending)
   If Sprite = 0
     ;error creating
@@ -328,6 +361,10 @@ EndProcedure
 Procedure CreateFallingPieceWheelSprites()
   Protected PieceType.a
   For PieceType = #Line To #Right4
+    If IsSprite(FallingPieceWheelSprites(PieceType))
+      FreeSprite(FallingPieceWheelSprites(PieceType))
+    EndIf
+    
     Protected Sprite = CreateSprite(#PB_Any, #Piece_Size * Piece_Width,
                                     #Piece_Size * Piece_Height, #PB_Sprite_AlphaBlending)
     If Sprite <> 0
@@ -551,7 +588,7 @@ Procedure DrawPlayFieldHUD(*PlayField.TPlayField)
   StopDrawing()
 EndProcedure
 
-Procedure Draw(*PLayField.TPlayField)
+Procedure DrawPlayfield(*PLayField.TPlayField)
   DrawFallingPiecePosition(*PLayField)
   
   Protected x.u, y.u
@@ -582,9 +619,42 @@ EndProcedure
 Procedure DrawPlayFields()
   Protected i.a
   For i = 1 To NumPlayers
-    Draw(@PlayFields(i - 1))
+    DrawPlayfield(@PlayFields(i - 1))
   Next
 EndProcedure
+
+Procedure DrawStartMenu()
+  Protected MenuTitleX.f = (ScreenWidth() - SpriteWidth(StartMenu\StartMenuTitleSprite)) / 2
+  Protected MenuTitleY.f = 50
+  DisplayTransparentSprite(StartMenu\StartMenuTitleSprite, MenuTitleX, MenuTitleY)
+  StartDrawing(ScreenOutput())
+  DrawingMode(#PB_2DDrawing_Transparent)
+  Protected NumPlayersText.s = "Number of Players:"
+  Protected NumPlayersWidth = TextWidth(NumPlayersText)
+  Protected NumPlayersX.f = (ScreenWidth() - NumPlayersWidth) / 2
+  Protected NumPlayersY.f = MenuTitleY + SpriteHeight(StartMenu\StartMenuTitleSprite) + 50
+  DrawText(NumPlayersX, NumPlayersY, NumPlayersText, RGB($FF, $cc, $33))
+  
+  Protected CurrentNumPlayers.s = Str(StartMenu\NumPlayers)
+  Protected CurrentNumPlayersWidth = TextWidth(CurrentNumPlayers)
+  Protected CurrentNumPlayersX.f = (ScreenWidth() - CurrentNumPlayersWidth) / 2
+  Protected CurrentNumPlayersY.f = NumPlayersY + 20
+  DrawText(CurrentNumPlayersX - 10, CurrentNumPlayersY, "<")
+  DrawText(CurrentNumPlayersX, CurrentNumPlayersY, CurrentNumPlayers, RGB($FF, $cc, $33))
+  DrawText(CurrentNumPlayersX + CurrentNumPlayersWidth, CurrentNumPlayersY, ">")
+  StopDrawing()
+EndProcedure
+
+Procedure Draw()
+  If GameState = #Playing
+    DrawPlayFields()
+  ElseIf GameState = #StartMenu
+    DrawStartMenu()
+    
+  EndIf
+  
+EndProcedure
+
 
 
 Procedure.a CheckCompletedLines(*PlayField.TPlayField)
@@ -831,28 +901,68 @@ Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
   EndIf
 EndProcedure
 
+Procedure StartNewGame(NumberOfPlayers.a)
+  NumPlayers = NumberOfPlayers
+  InitPlayFields(NumPlayers, PlayFields())
+  CreateFallingPieceWheelSprites()
+  CreateFallingPiecePositionSprite()
+  GameState = #Playing
+EndProcedure
+
+Procedure UpdateStartMenu(Elapsed.f)
+  Protected LeftReleased.i = KeyboardReleased(#PB_Key_Left)
+  Protected RightReleased.i = KeyboardReleased(#PB_Key_Right)
+  If LeftReleased
+    StartMenu\NumPlayers - 1
+    If StartMenu\NumPlayers < 1
+      StartMenu\NumPlayers = #Max_PlayFields
+    EndIf
+  EndIf
+  
+  If RightReleased
+    StartMenu\NumPlayers + 1
+    If StartMenu\NumPlayers > #Max_PlayFields
+      StartMenu\NumPlayers = 1
+    EndIf
+    
+  EndIf
+  
+  Protected ControlReleased.i = KeyboardReleased(#PB_Key_LeftControl)
+  If ControlReleased
+    ;start the game
+    StartNewGame(StartMenu\NumPlayers)
+  EndIf
+  
+  
+  
+EndProcedure
+
 Procedure Update(Elapsed.f)
   CheckKeys()
-  Protected i.a
-  For i = 1 To NumPlayers
-    UpdateFallingPiece(@PlayFields(i - 1), Elapsed)
-    UpdateFallingPieceWheel(@PlayFields(i - 1), Elapsed)
-    UpdateFallingPiecePosition(@PlayFields(i - 1), Elapsed)
-    UpdateScoringCompletedLines(@PlayFields(i - 1), Elapsed)
-  Next i
+  If GameState = #Playing
+    Protected i.a
+    For i = 1 To NumPlayers
+      UpdateFallingPiece(@PlayFields(i - 1), Elapsed)
+      UpdateFallingPieceWheel(@PlayFields(i - 1), Elapsed)
+      UpdateFallingPiecePosition(@PlayFields(i - 1), Elapsed)
+      UpdateScoringCompletedLines(@PlayFields(i - 1), Elapsed)
+    Next i
+  ElseIf GameState = #StartMenu
+    UpdateStartMenu(Elapsed)
+  EndIf
+
 EndProcedure
 
 ;===================main program starts here================
 InitSprite()
 InitKeyboard()
-SetupNumPlayers()
-OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One Button Tetris", #PB_Window_ScreenCentered)
+OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One-Button Tetris", #PB_Window_ScreenCentered)
 OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
+UsePNGImageDecoder()
+SetupStartMenu()
 LoadPiecesTemplate()
 LoadPiecesConfigurations()
-InitPlayFields(NumPlayers, PlayFields())
-CreateFallingPieceWheelSprites()
-CreateFallingPiecePositionSprite()
+GameState = #StartMenu
 
 LastTimeInMs = ElapsedMilliseconds()
 
@@ -867,7 +977,7 @@ Repeat
   
   ;Draw
   ClearScreen(#Black)
-  DrawPlayFields()
+  Draw()
   
   
   FlipBuffers()
