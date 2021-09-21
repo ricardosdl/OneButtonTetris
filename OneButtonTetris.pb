@@ -633,7 +633,7 @@ Procedure DrawStartMenu()
   Protected NumPlayersWidth = TextWidth(NumPlayersText)
   Protected NumPlayersX.f = (ScreenWidth() - NumPlayersWidth) / 2
   Protected NumPlayersY.f = MenuTitleY + SpriteHeight(StartMenu\StartMenuTitleSprite) + 50
-  DrawText(NumPlayersX, NumPlayersY, NumPlayersText, RGB($FF, $cc, $33))
+  DrawText(NumPlayersX, NumPlayersY, NumPlayersText)
   
   Protected CurrentNumPlayers.s = Str(StartMenu\NumPlayers)
   Protected CurrentNumPlayersWidth = TextWidth(CurrentNumPlayers)
@@ -642,6 +642,19 @@ Procedure DrawStartMenu()
   DrawText(CurrentNumPlayersX - 10, CurrentNumPlayersY, "<")
   DrawText(CurrentNumPlayersX, CurrentNumPlayersY, CurrentNumPlayers, RGB($FF, $cc, $33))
   DrawText(CurrentNumPlayersX + CurrentNumPlayersWidth, CurrentNumPlayersY, ">")
+  
+  Protected ControlsText.s = "Controls:"
+  Protected ControlsTextWidth = TextWidth(ControlsText)
+  Protected ControlsTextX.f = (ScreenWidth() - ControlsTextWidth) / 2
+  Protected ControlsTextY.f = CurrentNumPlayersY + 20
+  DrawText(ControlsTextX, ControlsTextY, ControlsText)
+  
+  Protected PlayersControls.s = "Player 1: Left Control | Player 2: Space | Player 3: Enter | Player 4: Right Key"
+  Protected PlayersControlsWidth = TextWidth(PlayersControls)
+  Protected PlayersControlsX.f = (ScreenWidth() - PlayersControlsWidth) / 2
+  Protected PlayerControlsY.f = ControlsTextY + 20
+  DrawText(PlayersControlsX, PlayerControlsY, PlayersControls, RGB($ff, $cc, $33))
+  
   StopDrawing()
 EndProcedure
 
