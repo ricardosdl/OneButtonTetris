@@ -670,7 +670,7 @@ Procedure DrawStartMenu()
   DrawText(CurrentNumPlayersX, CurrentNumPlayersY, CurrentNumPlayers, RGB($FF, $cc, $33))
   DrawText(CurrentNumPlayersX + CurrentNumPlayersWidth, CurrentNumPlayersY, ">")
   
-  Protected ControlsText.s = "Controls:"
+  Protected ControlsText.s = "Action Keys:"
   Protected ControlsTextWidth = TextWidth(ControlsText)
   Protected ControlsTextX.f = (ScreenWidth() - ControlsTextWidth) / 2
   Protected ControlsTextY.f = CurrentNumPlayersY + 20
@@ -984,6 +984,17 @@ Procedure UpdateStartMenu(Elapsed.f)
     EndIf
     
   EndIf
+  
+  If KeyboardReleased(#PB_Key_1)
+    StartMenu\NumPlayers = 1
+  ElseIf KeyboardReleased(#PB_Key_2)
+    StartMenu\NumPlayers = 2
+  ElseIf KeyboardReleased(#PB_Key_3)
+    StartMenu\NumPlayers = 3
+  ElseIf KeyboardReleased(#PB_Key_4)
+    StartMenu\NumPlayers = 4
+  EndIf
+  
   
   Protected ControlReleased.i = KeyboardReleased(#PB_Key_LeftControl)
   Protected SpaceReleased.i = KeyboardReleased(#PB_Key_Space)
