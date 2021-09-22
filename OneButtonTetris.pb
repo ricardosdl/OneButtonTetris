@@ -51,6 +51,7 @@ Enumeration TGameState
   #StartMenu
   #Playing
   #Paused
+  #SinglePlayerGameOver
 EndEnumeration
 
 Enumeration TActionKey
@@ -317,10 +318,13 @@ Procedure SetupFallingPieceWheel(*FallingPieceWheel.TFallingPieceWheel, PosX.f, 
   InitFallingPieceWheel(*FallingPieceWheel)
   *FallingPieceWheel\x = PosX
   *FallingPieceWheel\y = PosY
-  If IsSprite(*FallingPieceWheel\CurrentPieceBackgroundSprite) = 0
-    *FallingPieceWheel\CurrentPieceBackgroundSprite = CreateSprite(#PB_Any, #Piece_Size * Piece_Width, #Piece_Size * Piece_Height,
-                                                                 #PB_Sprite_AlphaBlending)
+  
+  If IsSprite(*FallingPieceWheel\CurrentPieceBackgroundSprite)
+    FreeSprite(*FallingPieceWheel\CurrentPieceBackgroundSprite)
   EndIf
+  
+  *FallingPieceWheel\CurrentPieceBackgroundSprite = CreateSprite(#PB_Any, #Piece_Size * Piece_Width, #Piece_Size * Piece_Height,
+                                                                 #PB_Sprite_AlphaBlending)
   
   GetFallingPieceWheelWidth(*FallingPieceWheel\Width)
   
@@ -1011,6 +1015,23 @@ Procedure UpdateStartMenu(Elapsed.f)
   
 EndProcedure
 
+Procedure UpdateGameOverPlayFields(Elapsed.f)
+  If (NumPlayers = 1) And (PlayFields(0)\State = #GameOver)
+    GameState = #StartMenu
+    ProcedureReturn
+  EndIf
+  
+  Protected i.a
+  ;Dim 
+  For i = 1 To NumPlayers
+    
+  Next
+  
+  
+EndIf
+
+EndProcedure
+
 Procedure Update(Elapsed.f)
   If GameState = #Playing
     CheckKeys()
@@ -1021,6 +1042,7 @@ Procedure Update(Elapsed.f)
       UpdateFallingPiecePosition(@PlayFields(i - 1), Elapsed)
       UpdateScoringCompletedLines(@PlayFields(i - 1), Elapsed)
     Next i
+    UpdateGameOverPlayFields(Elapsed)
   ElseIf GameState = #StartMenu
     UpdateStartMenu(Elapsed)
   EndIf
