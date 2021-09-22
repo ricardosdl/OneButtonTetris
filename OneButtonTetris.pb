@@ -53,6 +53,14 @@ Enumeration TGameState
   #Paused
 EndEnumeration
 
+Enumeration TActionKey
+  #LeftControl
+  #Space
+  #Backspace
+  #DownKey
+EndEnumeration
+
+
 Structure TPieceTemplate
   Array PieceTemplate.u(#Piece_Size - 1, #Piece_Size - 1)
 EndStructure
@@ -114,6 +122,7 @@ Structure TPlayField
   CompletedLines.TCompletedLines
   Score.l
   PlayerID.a
+  ActionKey.a
 EndStructure
 
 Structure TStartMenu
@@ -133,7 +142,8 @@ Global GameState.a, NumPlayers.a = 1
 Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
 Global Dim FallingPieceWheelSprites(#Right4), FallingPiecePositionSprite.i = #False
 Global StartMenu.TStartMenu
-Global SpaceKeyReleased.i = #False
+Global ControlReleased, SpaceKeyReleased.i, BackspaceReleased.i, DownKeyReleased.i = #False
+
 
 ;Reads a list of integers separated by Separator and put them on IntegerList()
 ;no check is performed for valid integers in StringList
@@ -262,6 +272,11 @@ Procedure ChangeGameState(*PlayField.TPlayField, NewState.a)
   
 EndProcedure
 
+Procedure GetPlayfieldActionKey(PlayerID.a)
+  ;makes the playerid match one of the TActionKey values
+  ProcedureReturn PlayerID - 1
+EndProcedure
+
 Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f, PlayerID.a)
   *PlayField\x = PosX
   *PlayField\y = PosY
@@ -277,6 +292,7 @@ Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f, PlayerID.a)
   ClearPlayFieldCompletedLines(*PlayField)
   *PlayField\Score = 0
   *PlayField\PlayerID = PlayerID
+  *PlayField\ActionKey = GetPlayfieldActionKey(PlayerID)
   ;*PlayField\GameState = #ChoosingFallingPiecePosition
   ChangeGameState(*PlayField, #ChoosingFallingPiecePosition)
   
@@ -649,7 +665,7 @@ Procedure DrawStartMenu()
   Protected ControlsTextY.f = CurrentNumPlayersY + 20
   DrawText(ControlsTextX, ControlsTextY, ControlsText)
   
-  Protected PlayersControls.s = "Player 1: Left Control | Player 2: Space | Player 3: Enter | Player 4: Right Key"
+  Protected PlayersControls.s = "Player 1: Left Control | Player 2: Space | Player 3: BackSpace | Player 4: Down Arrow Key"
   Protected PlayersControlsWidth = TextWidth(PlayersControls)
   Protected PlayersControlsX.f = (ScreenWidth() - PlayersControlsWidth) / 2
   Protected PlayerControlsY.f = ControlsTextY + 20
@@ -837,8 +853,10 @@ Procedure UpdateFallingPieceWheel(*PlayField.TPlayField, Elapsed.f)
 EndProcedure
 
 Procedure CheckKeys()
-  ExamineKeyboard()
-  SpaceKeyReleased = KeyboardReleased(#PB_Key_Space)
+  ControlReleased.i = KeyboardReleased(#PB_Key_LeftControl)
+  SpaceKeyReleased.i = KeyboardReleased(#PB_Key_Space)
+  BackspaceReleased.i = KeyboardReleased(#PB_Key_Back)
+  DownKeyReleased.i = KeyboardReleased(#PB_Key_Down)
 EndProcedure
 
 Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
@@ -941,9 +959,14 @@ Procedure UpdateStartMenu(Elapsed.f)
   EndIf
   
   Protected ControlReleased.i = KeyboardReleased(#PB_Key_LeftControl)
-  If ControlReleased
+  Protected SpaceReleased.i = KeyboardReleased(#PB_Key_Space)
+  Protected BackspaceReleased.i = KeyboardReleased(#PB_Key_Back)
+  Protected DownReleased.i = KeyboardReleased(#PB_Key_Down)
+  Protected StartTheGame.a = Bool(ControlReleased Or SpaceReleased Or BackspaceReleased Or DownReleased)
+  If StartTheGame
     ;start the game
     StartNewGame(StartMenu\NumPlayers)
+    ProcedureReturn
   EndIf
   
   
@@ -951,8 +974,8 @@ Procedure UpdateStartMenu(Elapsed.f)
 EndProcedure
 
 Procedure Update(Elapsed.f)
-  CheckKeys()
   If GameState = #Playing
+    CheckKeys()
     Protected i.a
     For i = 1 To NumPlayers
       UpdateFallingPiece(@PlayFields(i - 1), Elapsed)
@@ -986,6 +1009,7 @@ Repeat
   Global event = WindowEvent()
   
   ;Update
+  ExamineKeyboard()
   Update(ElapsedTimneInS)
   
   ;Draw
