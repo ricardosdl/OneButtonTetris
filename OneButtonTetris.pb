@@ -272,9 +272,20 @@ Procedure ChangeGameState(*PlayField.TPlayField, NewState.a)
   
 EndProcedure
 
-Procedure GetPlayfieldActionKey(PlayerID.a)
-  ;makes the playerid match one of the TActionKey values
-  ProcedureReturn PlayerID - 1
+Procedure.i GetPlayfieldActionKey(PlayerID.a)
+  Select PlayerID
+    Case 1:
+      ProcedureReturn #LeftControl
+    Case 2:
+      ProcedureReturn #Space
+    Case 3:
+      ProcedureReturn #Backspace
+    Case 4:
+      ProcedureReturn #DownKey
+      
+  EndSelect
+  
+  ProcedureReturn #False
 EndProcedure
 
 Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f, PlayerID.a)
@@ -758,6 +769,22 @@ Procedure LaunchRandomFallingPiece()
   ;LaunchFallingPiece(Random(#Right4, #Line))
 EndProcedure
 
+Procedure.i IsActionKeyActivated(ActionKey.a)
+  Select ActionKey
+    Case #LeftControl
+      ProcedureReturn ControlReleased
+    Case #Space
+      ProcedureReturn SpaceKeyReleased
+    Case #Backspace
+      ProcedureReturn BackspaceReleased
+    Case #DownKey
+      ProcedureReturn DownKeyReleased
+  EndSelect
+  
+  ProcedureReturn #False
+  
+EndProcedure
+
 Procedure UpdateFallingPiece(*PlayField.TPlayField, Elapsed.f)
   Protected *FallingPiece.TFallingPiece = @*PlayField\FallingPiece
   ;gets the number of configuration this piecetype has
@@ -766,7 +793,7 @@ Procedure UpdateFallingPiece(*PlayField.TPlayField, Elapsed.f)
   ;gets the current template used by the falling piece
   Protected PieceTemplateIdx.a = GetPieceTemplateIdx(*FallingPiece\Type, *FallingPiece\Configuration)
   
-  If SpaceKeyReleased
+  If IsActionKeyActivated(*PlayField\ActionKey)
     *FallingPiece\Configuration = (*FallingPiece\Configuration + 1) % NumConfigurations
   EndIf
   
@@ -836,7 +863,7 @@ Procedure UpdateFallingPieceWheel(*PlayField.TPlayField, Elapsed.f)
     *FallingPieceWheel\PieceType = (*FallingPieceWheel\PieceType + 1) % #Num_Piece_Types
   EndIf
   
-  If SpaceKeyReleased And (Not *FallingPieceWheel\ChoosedPiece)
+  If IsActionKeyActivated(*PlayField\ActionKey) And (Not *FallingPieceWheel\ChoosedPiece)
     ;the player chose the current piece
     *FallingPieceWheel\ChoosedPiece = #True
     *FallingPieceWheel\ChoosedPieceTimer = 0.5
@@ -853,10 +880,10 @@ Procedure UpdateFallingPieceWheel(*PlayField.TPlayField, Elapsed.f)
 EndProcedure
 
 Procedure CheckKeys()
-  ControlReleased.i = KeyboardReleased(#PB_Key_LeftControl)
-  SpaceKeyReleased.i = KeyboardReleased(#PB_Key_Space)
-  BackspaceReleased.i = KeyboardReleased(#PB_Key_Back)
-  DownKeyReleased.i = KeyboardReleased(#PB_Key_Down)
+  ControlReleased = KeyboardReleased(#PB_Key_LeftControl)
+  SpaceKeyReleased = KeyboardReleased(#PB_Key_Space)
+  BackspaceReleased = KeyboardReleased(#PB_Key_Back)
+  DownKeyReleased = KeyboardReleased(#PB_Key_Down)
 EndProcedure
 
 Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
@@ -866,7 +893,7 @@ Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
   
   Protected *FallingPiecePosition.TFallingPiecePosition = @*PlayField\FallingPiecePosition
   
-  If SpaceKeyReleased And Not *FallingPiecePosition\ChoosedPosition
+  If IsActionKeyActivated(*PlayField\ActionKey) And Not *FallingPiecePosition\ChoosedPosition
     *FallingPiecePosition\ChoosedPosition = #True
     *FallingPiecePosition\ChoosedPositionTimer = 0.5
   EndIf
