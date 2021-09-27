@@ -1016,19 +1016,27 @@ Procedure UpdateStartMenu(Elapsed.f)
 EndProcedure
 
 Procedure UpdateGameOverPlayFields(Elapsed.f)
-  If (NumPlayers = 1) And (PlayFields(0)\State = #GameOver)
-    GameState = #StartMenu
+  If NumPlayers = 1
+    If PlayFields(0)\State = #GameOver
+      GameState = #StartMenu
+      ProcedureReturn
+    EndIf
     ProcedureReturn
   EndIf
   
   Protected i.a
-  ;Dim 
+  Protected AlivePlayers.a = 0
   For i = 1 To NumPlayers
-    
+    If PlayFields(i - 1)\State <> #GameOver
+      AlivePlayers + 1
+    EndIf
   Next
   
+  If AlivePlayers = 1
+    ;we have a winner
+    GameState = #StartMenu
+  EndIf
   
-EndIf
 
 EndProcedure
 
