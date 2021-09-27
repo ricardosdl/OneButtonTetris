@@ -142,7 +142,7 @@ Global Dim PlayFields.TPlayField(#Max_PlayFields - 1)
 Global GameState.a, NumPlayers.a = 1
 Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
 Global Dim FallingPieceWheelSprites(#Right4), FallingPiecePositionSprite.i = #False
-Global StartMenu.TStartMenu
+Global StartMenu.TStartMenu, Bitmap_Font_Sprite.i
 Global ControlReleased, SpaceKeyReleased.i, BackspaceReleased.i, DownKeyReleased.i = #False
 
 
@@ -158,6 +158,28 @@ Procedure StringListToAsciiList(StringList.s, List AsciiList.a(), Separator.s = 
     AddElement(AsciiList())
     AsciiList() = Val(StringField(StringList, i, Separator))
   Next i
+EndProcedure
+
+Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 24)
+  ;ClipSprite(Bitmap_Font_Sprite, #PB_Default, #PB_Default, #PB_Default, #PB_Default)
+  ;ZoomSprite(Bitmap_Font_Sprite, #PB_Default, #PB_Default)
+  Protected i.i
+  For i.i = 1 To Len(Text);loop the string Text char by char
+    Protected AsciiValue.a = Asc(Mid(Text, i, 1))
+    ClipSprite(Bitmap_Font_Sprite, (AsciiValue - 32) % 16 * 8, (AsciiValue - 32) / 16 * 12, 8, 12)
+    ZoomSprite(Bitmap_Font_Sprite, CharWidthPx, CharHeightPx)
+    DisplayTransparentSprite(Bitmap_Font_Sprite, x + (i - 1) * CharWidthPx, y)
+  Next
+EndProcedure
+
+Procedure LoadBitmapFontSprite()
+  Bitmap_Font_Sprite = LoadSprite(#PB_Any, "assets\gfx\font.png", #PB_Sprite_AlphaBlending)
+  If IsSprite(Bitmap_Font_Sprite)
+    ProcedureReturn #True
+  EndIf
+  
+  ProcedureReturn #False
+  
 EndProcedure
 
 Procedure.a SetupNumPlayers()
@@ -696,7 +718,6 @@ Procedure Draw()
     DrawStartMenu()
     
   EndIf
-  
 EndProcedure
 
 
@@ -1053,6 +1074,8 @@ Procedure Update(Elapsed.f)
     UpdateGameOverPlayFields(Elapsed)
   ElseIf GameState = #StartMenu
     UpdateStartMenu(Elapsed)
+  ElseIf GameState = #Paused
+    
   EndIf
 
 EndProcedure
@@ -1063,6 +1086,7 @@ InitKeyboard()
 OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One-Button Tetris", #PB_Window_ScreenCentered)
 OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
 UsePNGImageDecoder()
+LoadBitmapFontSprite()
 SetupStartMenu()
 LoadPiecesTemplate()
 LoadPiecesConfigurations()
