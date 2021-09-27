@@ -143,7 +143,7 @@ Global GameState.a, NumPlayers.a = 1
 Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
 Global Dim FallingPieceWheelSprites(#Right4), FallingPiecePositionSprite.i = #False
 Global StartMenu.TStartMenu, Bitmap_Font_Sprite.i
-Global ControlReleased, SpaceKeyReleased.i, BackspaceReleased.i, DownKeyReleased.i = #False
+Global ControlReleased, SpaceKeyReleased.i, BackspaceReleased.i, DownKeyReleased.i, PKeyReleased.i = #False
 
 
 ;Reads a list of integers separated by Separator and put them on IntegerList()
@@ -711,11 +711,23 @@ Procedure DrawStartMenu()
   StopDrawing()
 EndProcedure
 
+Procedure DrawPauseMenu()
+  Protected PausedText.s = "PAUSED"
+  Protected PausedTextNumChars.u = Len(PausedText)
+  Protected PausedX.f, PausedY.f
+  PausedX = (ScreenWidth() - (PausedTextNumChars * 16)) / 2
+  PausedY = 200
+  DrawBitmapText(PausedX, PausedY, PausedText)
+EndProcedure
+
 Procedure Draw()
   If GameState = #Playing
     DrawPlayFields()
   ElseIf GameState = #StartMenu
     DrawStartMenu()
+  ElseIf GameState = #Paused
+    DrawPlayFields()
+    DrawPauseMenu()
     
   EndIf
 EndProcedure
@@ -909,6 +921,7 @@ Procedure CheckKeys()
   SpaceKeyReleased = KeyboardReleased(#PB_Key_Space)
   BackspaceReleased = KeyboardReleased(#PB_Key_Back)
   DownKeyReleased = KeyboardReleased(#PB_Key_Down)
+  PKeyReleased = KeyboardReleased(#PB_Key_P)
 EndProcedure
 
 Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
@@ -1061,9 +1074,27 @@ Procedure UpdateGameOverPlayFields(Elapsed.f)
 
 EndProcedure
 
+Procedure UpdatePauseMenu(Elapsed.f)
+  If PKeyReleased
+    ;TODO: play sound effect to indicate unpause
+    GameState = #Playing
+  EndIf
+EndProcedure
+
+Procedure PausePlayingGame()
+  ;TODO: play sound effect to indicate pause
+  ;paused the game
+  GameState = #Paused
+EndProcedure
+
 Procedure Update(Elapsed.f)
   If GameState = #Playing
     CheckKeys()
+    If PKeyReleased
+      PausePlayingGame()
+      ProcedureReturn
+    EndIf
+    
     Protected i.a
     For i = 1 To NumPlayers
       UpdateFallingPiece(@PlayFields(i - 1), Elapsed)
@@ -1075,7 +1106,8 @@ Procedure Update(Elapsed.f)
   ElseIf GameState = #StartMenu
     UpdateStartMenu(Elapsed)
   ElseIf GameState = #Paused
-    
+    CheckKeys()
+    UpdatePauseMenu(Elapsed)
   EndIf
 
 EndProcedure
