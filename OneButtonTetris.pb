@@ -72,6 +72,7 @@ Structure TPieceConfiguration
   List PieceTemplates.a()
   WidthInPieces.a
   HeightInPieces.a
+  Color.u
 EndStructure
 
 Structure TFallingPiece
@@ -411,6 +412,51 @@ Procedure CreateFallingPiecePositionSprite()
   FallingPiecePositionSprite = Sprite
 EndProcedure
 
+Procedure.i GetPieceTypeColorRGB(PieceType.a)
+  Select PieceType
+    Case #Line
+      ProcedureReturn RGB(255, 0, 0)
+    Case #Square
+      ProcedureReturn RGB(0, 0, 255)
+    Case #LeftL
+      ProcedureReturn RGB(255, 255, 0)
+    Case #RightL
+      ProcedureReturn RGB(Red(#Magenta), Green(#Magenta), Blue(#Magenta))
+    Case #Left4
+      ProcedureReturn RGB(Red(#Cyan), Green(#Cyan), Blue(#Cyan))
+    Case #Tee
+      ProcedureReturn RGB(0, 255, 0)
+    Case #Right4
+      ProcedureReturn RGB($FF, $66, $00)
+    Default
+      ProcedureReturn #Black
+  EndSelect
+  
+EndProcedure
+
+Procedure.i GetPieceTypeColorRGBA(PieceType.a)
+  Select PieceType
+    Case #Line
+      ProcedureReturn RGBA(255, 0, 0, 255)
+    Case #Square
+      ProcedureReturn RGBA(0, 0, 255, 255)
+    Case #LeftL
+      ProcedureReturn RGBA(255, 255, 0, 255)
+    Case #RightL
+      ProcedureReturn RGBA(Red(#Magenta), Green(#Magenta), Blue(#Magenta), 255)
+    Case #Left4
+      ProcedureReturn RGBA(Red(#Cyan), Green(#Cyan), Blue(#Cyan), 255)
+    Case #Tee
+      ProcedureReturn RGBA(0, 255, 0, 255)
+    Case #Right4
+      ProcedureReturn RGBA($FF, $66, $00, 255)
+    Default
+      ProcedureReturn RGBA(Red(#Black), Green(#Black), Blue(#Black), 255)
+  EndSelect
+  
+EndProcedure
+
+
 Procedure CreateFallingPieceWheelSprites()
   Protected PieceType.a
   For PieceType = #Line To #Right4
@@ -433,7 +479,8 @@ Procedure CreateFallingPieceWheelSprites()
       For x = 0 To #Piece_Size - 1
         For y = 0 To #Piece_Size - 1
           If PieceTemplates(PieceTemplateIdx)\PieceTemplate(x, y)
-            Box(x * Piece_Width, y * Piece_Height, Piece_Width - 1, Piece_Height - 1, RGBA($7f, 0, 0, $ff))
+            Protected Color.q = GetPieceTypeColorRGBA(PieceType)
+            Box(x * Piece_Width, y * Piece_Height, Piece_Width - 1, Piece_Height - 1, Color)
           EndIf
         Next y
       Next x
@@ -488,42 +535,49 @@ Procedure LoadPiecesConfigurations()
   StringListToAsciiList("0,1", PiecesConfiguration(#Line)\PieceTemplates())
   PiecesConfiguration(#Line)\WidthInPieces = 4
   PiecesConfiguration(#Line)\HeightInPieces = 1
+  PiecesConfiguration(#Line)\Color = #RedColor
   
   PiecesConfiguration(#Square)\PieceType = #Square
   PiecesConfiguration(#Square)\NumConfigurations = 1
   StringListToAsciiList("2", PiecesConfiguration(#Square)\PieceTemplates())
   PiecesConfiguration(#Square)\WidthInPieces = 2
   PiecesConfiguration(#Square)\HeightInPieces = 2
+  PiecesConfiguration(#Square)\Color = #BlueColor
   
   PiecesConfiguration(#LeftL)\PieceType = #LeftL
   PiecesConfiguration(#LeftL)\NumConfigurations = 4
   StringListToAsciiList("3,4,5,6", PiecesConfiguration(#LeftL)\PieceTemplates())
   PiecesConfiguration(#LeftL)\WidthInPieces = 3
   PiecesConfiguration(#LeftL)\HeightInPieces = 2
+  PiecesConfiguration(#LeftL)\Color = #YellowColor
   
   PiecesConfiguration(#RightL)\PieceType = #RightL
   PiecesConfiguration(#RightL)\NumConfigurations = 4
   StringListToAsciiList("7,8,9,10", PiecesConfiguration(#RightL)\PieceTemplates())
   PiecesConfiguration(#RightL)\WidthInPieces = 3
   PiecesConfiguration(#RightL)\HeightInPieces = 2
+  PiecesConfiguration(#RightL)\Color = #MagentaColor
   
   PiecesConfiguration(#Left4)\PieceType = #Left4
   PiecesConfiguration(#Left4)\NumConfigurations = 2
   StringListToAsciiList("11,12", PiecesConfiguration(#Left4)\PieceTemplates())
   PiecesConfiguration(#Left4)\WidthInPieces = 3
   PiecesConfiguration(#Left4)\HeightInPieces = 2
+  PiecesConfiguration(#Left4)\Color = #CyanColor
   
   PiecesConfiguration(#Tee)\PieceType = #Tee
   PiecesConfiguration(#Tee)\NumConfigurations = 4
   StringListToAsciiList("13,14,15,16", PiecesConfiguration(#Tee)\PieceTemplates())
   PiecesConfiguration(#Tee)\WidthInPieces = 3
   PiecesConfiguration(#Tee)\HeightInPieces = 2
+  PiecesConfiguration(#Tee)\Color = #GreenColor
   
   PiecesConfiguration(#Right4)\PieceType = #Right4
   PiecesConfiguration(#Right4)\NumConfigurations = 2
   StringListToAsciiList("17,18", PiecesConfiguration(#Right4)\PieceTemplates())
   PiecesConfiguration(#Right4)\WidthInPieces = 3
   PiecesConfiguration(#Right4)\HeightInPieces = 2
+  PiecesConfiguration(#Right4)\Color = #OrangeColor
 EndProcedure
 
 Procedure.q GetPieceColor(PieceInfo.u)
@@ -540,7 +594,7 @@ Procedure.q GetPieceColor(PieceInfo.u)
   ElseIf PieceInfo & #GreenColor
     ProcedureReturn #Green
   ElseIf PieceInfo & #OrangeColor
-    ProcedureReturn RGBA($FF, $66, $00, 255)
+    ProcedureReturn RGB($FF, $66, $00)
   EndIf
   
   ProcedureReturn #Black
@@ -570,7 +624,10 @@ Procedure DrawFallingPiece(*PlayField.TPlayField)
       Protected CellX.w = x + i
       Protected CellY.w = y + j
       If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j) And IsCellWithinPlayField(CellX, CellY)
-        Box(*PlayField\x + x * Piece_Width + i * Piece_Width, *PlayField\y + y * Piece_Height + j * Piece_Height, Piece_Width - 1, Piece_Height - 1, RGB($7f, 0, 0))
+        ;Protected Color.q = RGBA(0, 255, 0, 255)
+        ;Protected Color.q = RGB(0, 0, 255)
+        Protected Color.q = GetPieceTypeColorRGB(PieceType)
+        Box(*PlayField\x + x * Piece_Width + i * Piece_Width, *PlayField\y + y * Piece_Height + j * Piece_Height, Piece_Width - 1, Piece_Height - 1, Color)
       EndIf
       
     Next j
@@ -653,7 +710,7 @@ Procedure DrawPlayfield(*PLayField.TPlayField)
       EndIf
       
       Protected PieceInfo.u = *PlayField\PlayField(x, y)
-      Protected PieceColor = GetPieceColor(PieceInfo)
+      Protected PieceColor.q = GetPieceColor(PieceInfo)
       Box(*PlayField\x + x * Piece_Width, *PlayField\y + y * Piece_Height, Piece_Width - 1, Piece_Height - 1, PieceColor)
     Next y
   Next x
@@ -787,7 +844,7 @@ Procedure SaveFallingPieceOnPlayField(*PlayField.TPlayField)
           Continue
         EndIf
         
-        *PlayField\PlayField(XCell, YCell) = #Filled | #RedColor
+        *PlayField\PlayField(XCell, YCell) = #Filled | PiecesConfiguration(FallingPiece\Type)\Color
       EndIf
       
     Next j
