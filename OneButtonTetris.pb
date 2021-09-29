@@ -1084,6 +1084,70 @@ Procedure BringPlayFieldOneLineDown(*PlayField.TPLayField, StartLine.b)
   Next CurrentLine
 EndProcedure
 
+Procedure BringPlayFieldOneLineUp(*Playfield.TPlayfield, StartLine.b)
+  Protected CurrentLine.b, CurrentColumn.a
+  For CurrentLine = 1 To #PlayFieldSize_Height - 1
+    For CurrentColumn = 0 To #PlayFieldSize_Width - 1
+      *Playfield\PlayField(CurrentColumn, CurrentLine - 1) = *Playfield\PlayField(CurrentColumn, CurrentLine)
+    Next CurrentColumn
+    
+  Next CurrentLine
+  
+EndProcedure
+
+Procedure.u RandomColor()
+  Dim Colors.u(6)
+  
+  Colors(0) = #RedColor
+  Colors(1) = #BlueColor
+  Colors(2) = #YellowColor
+  Colors(3) = #MagentaColor
+  Colors(4) = #CyanColor
+  Colors(5) = #GreenColor
+  Colors(6) = #OrangeColor
+  
+  ProcedureReturn Colors(Random(6))
+  
+  
+EndProcedure
+
+Procedure.a FillPlayfieldLine(*Playfield.TPlayField, Line.a)
+  If Not IsCellWithinPlayField(0, Line)
+    ProcedureReturn #False
+  EndIf
+  
+  Protected CurrentColumn.a
+  For CurrentColumn = 0 To #PlayFieldSize_Width - 1
+    Protected Color.u = RandomColor()
+    If CurrentColumn & 1
+      ;if it is odd, we fill and put a color
+      *Playfield\PlayField(CurrentColumn, Line) = #Filled | Color
+    Else
+      ;if it is even, it will be empty
+      *Playfield\PlayField(CurrentColumn, Line) = #Empty
+    EndIf
+  Next
+  
+  
+EndProcedure
+
+Procedure MultiplayerAttack(AttackerPlayfieldID.a, CompletedLines.a)
+  Protected i.a
+  While CompletedLines > 0
+    For i = 1 To NumPlayers
+      If AttackerPlayfieldID = PlayFields(i - 1)\PlayerID
+        ;can't attack itself
+        Continue
+      EndIf
+      
+      BringPlayFieldOneLineUp(@PlayFields(i - 1), #PlayFieldSize_Height - 1)
+      FillPlayfieldLine(@PlayFields(i - 1), #PlayFieldSize_Height - 1)
+      
+    Next i
+    CompletedLines - 1
+  Wend
+EndProcedure
+
 Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
   If *PLayField\State <> #ScoringCompletedLines
     ProcedureReturn
@@ -1109,7 +1173,7 @@ Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
         ;bonus score
         *PLayField\Score + (*PLayField\CompletedLines\SequentialCompletedLines - 1) * (#Completed_Line_Score / 4)
       EndIf
-      
+      MultiplayerAttack(*PLayField\PlayerID, *PLayField\CompletedLines\SequentialCompletedLines)
       ClearPlayFieldCompletedLines(*PLayField)
       ChangeGameState(*PLayField, #ChoosingFallingPiecePosition)
     EndIf
