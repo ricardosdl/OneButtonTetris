@@ -27,6 +27,10 @@ EnumerationBinary TPieceInfo
   #GreenColor
   #OrangeColor
 EndEnumeration
+;the first two bits o the tpieceinfo are set to the empty or filled status, the seven
+;after are used to set the color, with this mask we can extract the color set on the pieceinfo
+;which is stored inside the Playfield array inside TPlayfield
+#Color_Mask = %111111100
 
 Enumeration TPieceType
   #Line
@@ -143,6 +147,7 @@ Global Dim PlayFields.TPlayField(#Max_PlayFields - 1)
 Global GameState.a, NumPlayers.a = 1
 Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
 Global Dim FallingPieceWheelSprites(#Right4), FallingPiecePositionSprite.i = #False
+Global Dim PiecesSprites(#Right4);the sprites used to draw the playfield and falling piece
 Global StartMenu.TStartMenu, Bitmap_Font_Sprite.i
 Global ControlReleased, SpaceKeyReleased.i, BackspaceReleased.i, DownKeyReleased.i, PKeyReleased.i = #False
 
@@ -456,6 +461,29 @@ Procedure.i GetPieceTypeColorRGBA(PieceType.a)
   
 EndProcedure
 
+Procedure.i GetPieceSpriteByColor(Color.u)
+  Select Color
+    Case #RedColor
+      ProcedureReturn PiecesSprites(0)
+    Case #BlueColor
+      ProcedureReturn PiecesSprites(1)
+    Case #YellowColor
+      ProcedureReturn PiecesSprites(2)
+    Case #MagentaColor
+      ProcedureReturn PiecesSprites(3)
+    Case #CyanColor
+      ProcedureReturn PiecesSprites(4)
+    Case #GreenColor
+      ProcedureReturn PiecesSprites(5)
+    Case #OrangeColor
+      ProcedureReturn PiecesSprites(6)
+    Default
+      ProcedureReturn #False
+  EndSelect
+  
+EndProcedure
+
+
 
 Procedure CreateFallingPieceWheelSprites()
   Protected PieceType.a
@@ -491,6 +519,26 @@ Procedure CreateFallingPieceWheelSprites()
     
   Next
   
+EndProcedure
+
+Procedure CreatePiecesSprites()
+  Protected PieceType.a
+  For PieceType = #Line To #Right4
+    If IsSprite(PiecesSprites(PieceType))
+      FreeSprite(PiecesSprites(PieceType))
+    EndIf
+    
+    Protected PieceSprite.i = CreateSprite(#PB_Any, Piece_Width - 1, Piece_Height - 1, #PB_Sprite_AlphaBlending)
+    If PieceSprite <> 0
+      StartDrawing(SpriteOutput(PieceSprite))
+      DrawingMode(#PB_2DDrawing_AllChannels)
+      Box(0, 0, Piece_Width, Piece_Height, GetPieceTypeColorRGBA(PieceType))
+      StopDrawing()
+      PiecesSprites(PieceType) = PieceSprite
+    EndIf
+    
+    
+  Next
 EndProcedure
 
 Procedure SavePieceTemplate(List PieceLines.s(), CurrentPieceTemplate.a)
@@ -702,7 +750,6 @@ Procedure DrawPlayfield(*PLayField.TPlayField)
   DrawFallingPiecePosition(*PLayField)
   
   Protected x.u, y.u
-  StartDrawing(ScreenOutput())
   For x = 0 To #PlayFieldSize_Width - 1
     For y = 0 To #PlayFieldSize_Height - 1
       If (*PlayField\PlayField(x, y) & #Empty)
@@ -710,10 +757,12 @@ Procedure DrawPlayfield(*PLayField.TPlayField)
       EndIf
       
       Protected PieceInfo.u = *PlayField\PlayField(x, y)
-      Protected PieceColor.q = GetPieceColor(PieceInfo)
-      Box(*PlayField\x + x * Piece_Width, *PlayField\y + y * Piece_Height, Piece_Width - 1, Piece_Height - 1, PieceColor)
+      Protected PieceColor.u = PieceInfo & #Color_Mask
+      DisplayTransparentSprite(GetPieceSpriteByColor(PieceColor), *PlayField\x + x * Piece_Width, *PlayField\y + y * Piece_Height)
     Next y
   Next x
+  
+  StartDrawing(ScreenOutput())
   
   DrawFallingPiece(*PLayField)
   
@@ -1059,6 +1108,7 @@ Procedure StartNewGame(NumberOfPlayers.a)
   InitPlayFields(NumPlayers, PlayFields())
   CreateFallingPieceWheelSprites()
   CreateFallingPiecePositionSprite()
+  CreatePiecesSprites()
   GameState = #Playing
 EndProcedure
 
