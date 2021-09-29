@@ -147,6 +147,7 @@ Global Dim PlayFields.TPlayField(#Max_PlayFields - 1)
 Global GameState.a, NumPlayers.a = 1
 Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
 Global Dim FallingPieceWheelSprites(#Right4), FallingPiecePositionSprite.i = #False
+Global PlayfieldOutlineSprite.i
 Global Dim PiecesSprites(#Right4);the sprites used to draw the playfield and falling piece
 Global StartMenu.TStartMenu, Bitmap_Font_Sprite.i
 Global ControlReleased, SpaceKeyReleased.i, BackspaceReleased.i, DownKeyReleased.i, PKeyReleased.i = #False
@@ -541,6 +542,27 @@ Procedure CreatePiecesSprites()
   Next
 EndProcedure
 
+Procedure.a CreatePlayfieldOutlineSprite()
+  If IsSprite(PlayfieldOutlineSprite)
+    FreeSprite(PlayfieldOutlineSprite)
+  EndIf
+  
+  PlayfieldOutlineSprite = CreateSprite(#PB_Any, #PlayFieldSize_Width * Piece_Width, #PlayFieldSize_Height * Piece_Height, #PB_Sprite_AlphaBlending)
+  If PlayfieldOutlineSprite <> 0
+    StartDrawing(SpriteOutput(PlayfieldOutlineSprite))
+    DrawingMode(#PB_2DDrawing_AllChannels)
+    Box(0, 0, SpriteWidth(PlayfieldOutlineSprite), SpriteHeight(PlayfieldOutlineSprite), RGBA(0, 0, 0, 0))
+    DrawingMode(#PB_2DDrawing_Outlined | #PB_2DDrawing_AllChannels)
+    Box(0, 0, SpriteWidth(PlayfieldOutlineSprite), SpriteHeight(PlayfieldOutlineSprite), RGBA($7f, 80, 70, 255))
+    StopDrawing()
+    ProcedureReturn #True
+  EndIf
+  
+  ProcedureReturn #False
+  
+  
+EndProcedure
+
 Procedure SavePieceTemplate(List PieceLines.s(), CurrentPieceTemplate.a)
   Protected PieceTemplateLine.a = 0
   ForEach PieceLines()
@@ -712,8 +734,7 @@ Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
 EndProcedure
 
 Procedure DrawPlayFieldOutline(*Playfield.TPlayField)
-  Line(*PlayField\x + 1, *PlayField\y + 1, #PlayFieldSize_Width * Piece_Width, 1, RGB($7f, 80, 70))
-  Line(*PlayField\x + #PlayFieldSize_Width * Piece_Width, *PlayField\y + 1, 1, #PlayFieldSize_Height * Piece_Height, RGB($7f, 80, 70))
+  DisplayTransparentSprite(PlayfieldOutlineSprite, *Playfield\x, *Playfield\y)
 EndProcedure
 
 Procedure DrawFallingPiecePosition(*PLayField.TPlayField)
@@ -760,11 +781,7 @@ Procedure DrawPlayfield(*PLayField.TPlayField)
   
   DrawFallingPiece(*PLayField)
   
-  StartDrawing(ScreenOutput())
-  
   DrawPlayFieldOutline(*PLayField)
-  
-  StopDrawing()
   
   DrawPlayFieldHUD(*PLayField)
   
@@ -1105,6 +1122,7 @@ Procedure StartNewGame(NumberOfPlayers.a)
   CreateFallingPieceWheelSprites()
   CreateFallingPiecePositionSprite()
   CreatePiecesSprites()
+  CreatePlayfieldOutlineSprite()
   GameState = #Playing
 EndProcedure
 
