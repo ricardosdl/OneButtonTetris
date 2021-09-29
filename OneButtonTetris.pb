@@ -672,12 +672,8 @@ Procedure DrawFallingPiece(*PlayField.TPlayField)
       Protected CellX.w = x + i
       Protected CellY.w = y + j
       If PieceTemplates(PieceTemplateIdx)\PieceTemplate(i, j) And IsCellWithinPlayField(CellX, CellY)
-        ;Protected Color.q = RGBA(0, 255, 0, 255)
-        ;Protected Color.q = RGB(0, 0, 255)
-        Protected Color.q = GetPieceTypeColorRGB(PieceType)
-        Box(*PlayField\x + x * Piece_Width + i * Piece_Width, *PlayField\y + y * Piece_Height + j * Piece_Height, Piece_Width - 1, Piece_Height - 1, Color)
+        DisplayTransparentSprite(PiecesSprites(PieceType), *PlayField\x + x * Piece_Width + i * Piece_Width, *PlayField\y + y * Piece_Height + j * Piece_Height)
       EndIf
-      
     Next j
     
   Next i
@@ -762,9 +758,9 @@ Procedure DrawPlayfield(*PLayField.TPlayField)
     Next y
   Next x
   
-  StartDrawing(ScreenOutput())
-  
   DrawFallingPiece(*PLayField)
+  
+  StartDrawing(ScreenOutput())
   
   DrawPlayFieldOutline(*PLayField)
   
