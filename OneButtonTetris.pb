@@ -307,7 +307,7 @@ Procedure.a SetupPlayFieldSizes(NumPlayers.a)
   EndSelect  
 EndProcedure
 
-Procedure ChangeGameState(*PlayField.TPlayField, NewState.a)
+Procedure ChangePlayFieldState(*PlayField.TPlayField, NewState.a)
   Protected OldGameState.a = *PlayField\State
   Select NewState
     Case #ChoosingFallingPiecePosition
@@ -362,7 +362,7 @@ Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f, PlayerID.a)
   *PlayField\PlayerID = PlayerID
   *PlayField\ActionKey = GetPlayfieldActionKey(PlayerID)
   ;*PlayField\GameState = #ChoosingFallingPiecePosition
-  ChangeGameState(*PlayField, #ChoosingFallingPiecePosition)
+  ChangePlayFieldState(*PlayField, #ChoosingFallingPiecePosition)
   
 EndProcedure
 
@@ -942,9 +942,9 @@ Procedure SaveFallingPieceOnPlayField(*PlayField.TPlayField)
   
   ClearPlayFieldCompletedLines(*PlayField)
   If CheckCompletedLines(*PlayField)
-    ChangeGameState(*PlayField, #ScoringCompletedLines)
+    ChangePlayFieldState(*PlayField, #ScoringCompletedLines)
   Else
-    ChangeGameState(*PlayField, #ChoosingFallingPiecePosition)
+    ChangePlayFieldState(*PlayField, #ChoosingFallingPiecePosition)
   EndIf
 EndProcedure
 
@@ -1058,7 +1058,7 @@ Procedure UpdateFallingPieceWheel(*PlayField.TPlayField, Elapsed.f)
   EndIf
   
   If *FallingPieceWheel\ChoosedPiece And *FallingPieceWheel\ChoosedPieceTimer < 0
-    ChangeGameState(*PlayField, #WaitingFallingPiece)
+    ChangePlayFieldState(*PlayField, #WaitingFallingPiece)
   EndIf
 EndProcedure
 
@@ -1096,7 +1096,7 @@ Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
   EndIf
   
   If *FallingPiecePosition\ChoosedPosition And *FallingPiecePosition\ChoosedPositionTimer <= 0
-    ChangeGameState(*PlayField, #ChoosingFallingPiece)
+    ChangePlayFieldState(*PlayField, #ChoosingFallingPiece)
   EndIf
 EndProcedure
 
@@ -1202,7 +1202,7 @@ Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
       EndIf
       MultiplayerAttack(*PLayField\PlayerID, *PLayField\CompletedLines\SequentialCompletedLines)
       ClearPlayFieldCompletedLines(*PLayField)
-      ChangeGameState(*PLayField, #ChoosingFallingPiecePosition)
+      ChangePlayFieldState(*PLayField, #ChoosingFallingPiecePosition)
     EndIf
   EndIf
 EndProcedure
