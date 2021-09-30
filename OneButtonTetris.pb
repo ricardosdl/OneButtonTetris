@@ -65,6 +65,11 @@ Enumeration TActionKey
   #DownKey
 EndEnumeration
 
+Enumeration TSounds
+  #MainMusic
+  #PauseSound
+EndEnumeration
+
 
 Structure TPieceTemplate
   Array PieceTemplate.u(#Piece_Size - 1, #Piece_Size - 1)
@@ -150,6 +155,7 @@ Global Dim FallingPieceWheelSprites(#Right4), FallingPiecePositionSprite.i = #Fa
 Global PlayfieldOutlineSprite.i
 Global Dim PiecesSprites(#Right4);the sprites used to draw the playfield and falling piece
 Global StartMenu.TStartMenu, Bitmap_Font_Sprite.i
+Global SoundInitiated.a = #False, VolumeMusic.a = 100, VolumeSoundEffects.a = 50
 Global ControlReleased, SpaceKeyReleased.i, BackspaceReleased.i, DownKeyReleased.i, PKeyReleased.i = #False
 
 
@@ -187,6 +193,27 @@ Procedure LoadBitmapFontSprite()
   
   ProcedureReturn #False
   
+EndProcedure
+
+Procedure LoadSounds()
+  If Not SoundInitiated
+    ProcedureReturn
+  EndIf
+  
+  LoadSound(#MainMusic, "assets\sfx\twister-tetris.ogg")
+  
+  
+EndProcedure
+
+Procedure PlaySoundEffect(Sound.a, Music.a = #False)
+  If Not SoundInitiated
+    ProcedureReturn
+  EndIf
+  If Music
+    PlaySound(Sound, #PB_Sound_Loop, VolumeMusic)
+  Else
+    PlaySound(Sound, 0, VolumeSoundEffects)
+  EndIf;#PB_Sound_MultiChannel is leaking memory
 EndProcedure
 
 Procedure.a SetupNumPlayers()
@@ -1188,6 +1215,7 @@ Procedure StartNewGame(NumberOfPlayers.a)
   CreatePiecesSprites()
   CreatePlayfieldOutlineSprite()
   GameState = #Playing
+  PlaySoundEffect(#MainMusic, #True)
 EndProcedure
 
 Procedure UpdateStartMenu(Elapsed.f)
@@ -1270,6 +1298,7 @@ Procedure PausePlayingGame()
   ;TODO: play sound effect to indicate pause
   ;paused the game
   GameState = #Paused
+  ;PauseSound(
 EndProcedure
 
 Procedure Update(Elapsed.f)
@@ -1300,6 +1329,9 @@ EndProcedure
 ;===================main program starts here================
 InitSprite()
 InitKeyboard()
+SoundInitiated = Bool(InitSound() <> 0)
+UseOGGSoundDecoder()
+LoadSounds()
 OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One-Button Tetris", #PB_Window_ScreenCentered)
 OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
 UsePNGImageDecoder()
