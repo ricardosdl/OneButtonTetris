@@ -51,7 +51,7 @@ Enumeration TPlayfieldState
   #GameOver
 EndEnumeration
 
-Enumeration TGameState
+Enumeration TGameStates
   #StartMenu
   #Playing
   #Paused
