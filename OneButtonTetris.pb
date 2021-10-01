@@ -70,6 +70,10 @@ Enumeration TSounds
   #PauseSound
 EndEnumeration
 
+Structure TGameState
+  CurrentGameState.a
+  OldGameState.a
+EndStructure
 
 Structure TPieceTemplate
   Array PieceTemplate.u(#Piece_Size - 1, #Piece_Size - 1)
@@ -149,7 +153,7 @@ Global Piece_Width.w, Piece_Height.w
 Global PlayField.TPlayField, FallingPiece.TFallingPiece, FallingPieceWheel.TFallingPieceWheel,
        FallingPiecePosition.TFallingPiecePosition
 Global Dim PlayFields.TPlayField(#Max_PlayFields - 1)
-Global GameState.a, NumPlayers.a = 1
+Global GameState.TGameState, NumPlayers.a = 1
 Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
 Global Dim FallingPieceWheelSprites(#Right4), FallingPiecePositionSprite.i = #False
 Global PlayfieldOutlineSprite.i
@@ -361,7 +365,6 @@ Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f, PlayerID.a)
   *PlayField\Score = 0
   *PlayField\PlayerID = PlayerID
   *PlayField\ActionKey = GetPlayfieldActionKey(PlayerID)
-  ;*PlayField\GameState = #ChoosingFallingPiecePosition
   ChangePlayFieldState(*PlayField, #ChoosingFallingPiecePosition)
   
 EndProcedure
@@ -867,11 +870,11 @@ Procedure DrawPauseMenu()
 EndProcedure
 
 Procedure Draw()
-  If GameState = #Playing
+  If GameState\CurrentGameState = #Playing
     DrawPlayFields()
-  ElseIf GameState = #StartMenu
+  ElseIf GameState\CurrentGameState = #StartMenu
     DrawStartMenu()
-  ElseIf GameState = #Paused
+  ElseIf GameState\CurrentGameState = #Paused
     DrawPlayFields()
     DrawPauseMenu()
     
@@ -1207,6 +1210,30 @@ Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
   EndIf
 EndProcedure
 
+Procedure ChangeGameState(*GameState.TGameState, NewGameState.a)
+  *GameState\OldGameState = *GameState\CurrentGameState
+  *GameState\CurrentGameState = NewGameState
+  Select NewGameState
+    Case #StartMenu
+      ;TODO: pause main music
+      
+    Case #Playing
+      If *GameState\OldGameState = #StartMenu
+        ;starting a new game, play the music from the beginning
+        PlaySoundEffect(#MainMusic, #True)
+      ElseIf *GameState\OldGameState = #Paused
+        ;TODO: play unpause sound
+        ;was paused just resume the  main music
+        ResumeSound(#MainMusic)
+      EndIf
+      
+      
+    Case #Paused
+      ;TODO: play the pause sound
+      PauseSound(#MainMusic)
+  EndSelect
+EndProcedure
+
 Procedure StartNewGame(NumberOfPlayers.a)
   NumPlayers = NumberOfPlayers
   InitPlayFields(NumPlayers, PlayFields())
@@ -1214,8 +1241,7 @@ Procedure StartNewGame(NumberOfPlayers.a)
   CreateFallingPiecePositionSprite()
   CreatePiecesSprites()
   CreatePlayfieldOutlineSprite()
-  GameState = #Playing
-  PlaySoundEffect(#MainMusic, #True)
+  ChangeGameState(@GameState, #Playing)
 EndProcedure
 
 Procedure UpdateStartMenu(Elapsed.f)
@@ -1265,7 +1291,7 @@ EndProcedure
 Procedure UpdateGameOverPlayFields(Elapsed.f)
   If NumPlayers = 1
     If PlayFields(0)\State = #GameOver
-      GameState = #StartMenu
+      ChangeGameState(@GameState, #StartMenu)
       ProcedureReturn
     EndIf
     ProcedureReturn
@@ -1281,7 +1307,7 @@ Procedure UpdateGameOverPlayFields(Elapsed.f)
   
   If AlivePlayers = 1
     ;we have a winner
-    GameState = #StartMenu
+    ChangeGameState(@GameState, #StartMenu)
   EndIf
   
 
@@ -1289,20 +1315,17 @@ EndProcedure
 
 Procedure UpdatePauseMenu(Elapsed.f)
   If PKeyReleased
-    ;TODO: play sound effect to indicate unpause
-    GameState = #Playing
+    ChangeGameState(@GameState, #Playing)
   EndIf
 EndProcedure
 
 Procedure PausePlayingGame()
-  ;TODO: play sound effect to indicate pause
   ;paused the game
-  GameState = #Paused
-  ;PauseSound(
+  ChangeGameState(@GameState, #Paused)
 EndProcedure
 
 Procedure Update(Elapsed.f)
-  If GameState = #Playing
+  If GameState\CurrentGameState = #Playing
     CheckKeys()
     If PKeyReleased
       PausePlayingGame()
@@ -1317,9 +1340,9 @@ Procedure Update(Elapsed.f)
       UpdateScoringCompletedLines(@PlayFields(i - 1), Elapsed)
     Next i
     UpdateGameOverPlayFields(Elapsed)
-  ElseIf GameState = #StartMenu
+  ElseIf GameState\CurrentGameState = #StartMenu
     UpdateStartMenu(Elapsed)
-  ElseIf GameState = #Paused
+  ElseIf GameState\CurrentGameState = #Paused
     CheckKeys()
     UpdatePauseMenu(Elapsed)
   EndIf
@@ -1339,7 +1362,7 @@ LoadBitmapFontSprite()
 SetupStartMenu()
 LoadPiecesTemplate()
 LoadPiecesConfigurations()
-GameState = #StartMenu
+ChangeGameState(@GameState, #StartMenu)
 
 LastTimeInMs = ElapsedMilliseconds()
 
