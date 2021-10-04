@@ -68,6 +68,7 @@ EndEnumeration
 Enumeration TSounds
   #MainMusic
   #PauseSound
+  #UnpauseSound
 EndEnumeration
 
 Structure TGameState
@@ -205,6 +206,8 @@ Procedure LoadSounds()
   EndIf
   
   LoadSound(#MainMusic, "assets\sfx\twister-tetris.ogg")
+  LoadSound(#PauseSound, "assets\sfx\pause.ogg")
+  LoadSound(#UnpauseSound, "assets\sfx\unpause.ogg")
   
   
 EndProcedure
@@ -1246,20 +1249,21 @@ Procedure ChangeGameState(*GameState.TGameState, NewGameState.a)
   Select NewGameState
     Case #StartMenu
       StopSoundEffect(#MainMusic)
+      
     Case #Playing
       If *GameState\OldGameState = #StartMenu
         ;starting a new game, play the music from the beginning
         PlaySoundEffect(#MainMusic, #True)
       ElseIf *GameState\OldGameState = #Paused
-        ;TODO: play unpause sound
+        PlaySoundEffect(#UnpauseSound)
         ;was paused just resume the  main music
         ResumeSoundEffect(#MainMusic)
       EndIf
       
-      
     Case #Paused
-      ;TODO: play the pause sound
       PauseSoundEffect(#MainMusic)
+      PlaySoundEffect(#PauseSound)
+      
   EndSelect
 EndProcedure
 
