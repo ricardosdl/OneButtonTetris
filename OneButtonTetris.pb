@@ -220,6 +220,34 @@ Procedure PlaySoundEffect(Sound.a, Music.a = #False)
   EndIf;#PB_Sound_MultiChannel is leaking memory
 EndProcedure
 
+Procedure StopSoundEffect(Sound.a)
+  If Not SoundInitiated
+    ProcedureReturn
+  EndIf
+  
+  StopSound(Sound)
+  
+EndProcedure
+
+Procedure PauseSoundEffect(Sound.a)
+  If Not SoundInitiated
+    ProcedureReturn
+  EndIf
+  
+  PauseSound(Sound)
+  
+EndProcedure
+
+Procedure ResumeSoundEffect(Sound.a)
+  If Not SoundInitiated
+    ProcedureReturn
+  EndIf
+  
+  ResumeSound(Sound)
+  
+EndProcedure
+
+
 Procedure.a SetupNumPlayers()
   Protected TextNumPlayers.s = InputRequester("Number of Players", "Type the number of players (1-4)", "1")
   TextNumPlayers = Trim(TextNumPlayers)
@@ -979,6 +1007,8 @@ Procedure UpdateFallingPiece(*PlayField.TPlayField, Elapsed.f)
   ;gets the current template used by the falling piece
   Protected PieceTemplateIdx.a = GetPieceTemplateIdx(*FallingPiece\Type, *FallingPiece\Configuration)
   
+  ;TODO: put the code that changes the configuration before the code above, where we get
+  ;the template for the current configuration
   If IsActionKeyActivated(*PlayField\ActionKey)
     *FallingPiece\Configuration = (*FallingPiece\Configuration + 1) % NumConfigurations
   EndIf
@@ -1215,8 +1245,7 @@ Procedure ChangeGameState(*GameState.TGameState, NewGameState.a)
   *GameState\CurrentGameState = NewGameState
   Select NewGameState
     Case #StartMenu
-      ;TODO: pause main music
-      
+      StopSoundEffect(#MainMusic)
     Case #Playing
       If *GameState\OldGameState = #StartMenu
         ;starting a new game, play the music from the beginning
@@ -1224,13 +1253,13 @@ Procedure ChangeGameState(*GameState.TGameState, NewGameState.a)
       ElseIf *GameState\OldGameState = #Paused
         ;TODO: play unpause sound
         ;was paused just resume the  main music
-        ResumeSound(#MainMusic)
+        ResumeSoundEffect(#MainMusic)
       EndIf
       
       
     Case #Paused
       ;TODO: play the pause sound
-      PauseSound(#MainMusic)
+      PauseSoundEffect(#MainMusic)
   EndSelect
 EndProcedure
 
