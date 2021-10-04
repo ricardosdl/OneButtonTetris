@@ -1,5 +1,5 @@
 ﻿EnableExplicit
-
+#DEBUG = #True
 #Game_Width = 800
 #Game_Height = 600
 #PlayFieldSize_Width = 10;pieces
@@ -69,11 +69,13 @@ Enumeration TSounds
   #MainMusic
   #PauseSound
   #UnpauseSound
+  #GameOverSound
 EndEnumeration
 
 Structure TGameState
   CurrentGameState.a
   OldGameState.a
+  MinTimeSinglePlayerGameOver.f
 EndStructure
 
 Structure TPieceTemplate
@@ -208,6 +210,7 @@ Procedure LoadSounds()
   LoadSound(#MainMusic, "assets\sfx\twister-tetris.ogg")
   LoadSound(#PauseSound, "assets\sfx\pause.ogg")
   LoadSound(#UnpauseSound, "assets\sfx\unpause.ogg")
+  LoadSound(#GameOverSound, "assets\sfx\gameover.ogg")
   
   
 EndProcedure
@@ -900,6 +903,36 @@ Procedure DrawPauseMenu()
   DrawBitmapText(PausedX, PausedY, PausedText)
 EndProcedure
 
+Procedure DrawSinglePlayerGameOver()
+  Protected GameOverCharWidth.a = 32
+  Protected GameOverCharHeight.a = 48
+  
+  Protected GameOverText.s = "GAME OVER"
+  Protected GameOverTextNumChars.u = Len(GameOverText)
+  Protected GameOverX.f, GameOverY.f
+  GameOverX = (ScreenWidth() - (GameOverTextNumChars * GameOverCharWidth)) / 2
+  GameOverY = 100
+  DrawBitmapText(GameOverX, GameOverY, GameOverText, GameOverCharWidth, GameOverCharHeight)
+  
+  Protected ScoreText.s = "Your score:" + Str(PlayFields(0)\Score)
+  Protected ScoreTextNumChars.u = Len(ScoreText)
+  Protected ScoreTextX.f, ScoreTextY.f
+  ScoreTextX = (ScreenWidth() - (ScoreTextNumChars * 16)) / 2
+  ScoreTextY = GameOverY + GameOverCharHeight + 10
+  DrawBitmapText(ScoreTextX, ScoreTextY, ScoreText)
+  
+  Protected KeyText.s = "Left Control to go back"
+  Protected KeyTextNumChars.u = Len(KeyText)
+  Protected KeyTextX.f, KeyTextY.f
+  KeyTextX = (ScreenWidth() - (KeyTextNumChars * 16)) / 2
+  KeyTextY = ScoreTextY + 24 + 10
+  DrawBitmapText(KeyTextX, KeyTextY, KeyText)
+  
+  
+  
+  
+EndProcedure
+
 Procedure Draw()
   If GameState\CurrentGameState = #Playing
     DrawPlayFields()
@@ -908,6 +941,10 @@ Procedure Draw()
   ElseIf GameState\CurrentGameState = #Paused
     DrawPlayFields()
     DrawPauseMenu()
+    
+  ElseIf GameState\CurrentGameState = #SinglePlayerGameOver
+    DrawPlayFields()
+    DrawSinglePlayerGameOver()
     
   EndIf
 EndProcedure
@@ -1263,6 +1300,11 @@ Procedure ChangeGameState(*GameState.TGameState, NewGameState.a)
       PauseSoundEffect(#MainMusic)
       PlaySoundEffect(#PauseSound)
       
+    Case #SinglePlayerGameOver
+      StopSoundEffect(#MainMusic)
+      PlaySoundEffect(#GameOverSound)
+      *GameState\MinTimeSinglePlayerGameOver = 2.0
+      
   EndSelect
 EndProcedure
 
@@ -1356,7 +1398,20 @@ Procedure PausePlayingGame()
   ChangeGameState(@GameState, #Paused)
 EndProcedure
 
+Procedure UpdateSinglePlayerGameOver(Elapsed.f)
+  GameState\MinTimeSinglePlayerGameOver - Elapsed
+  If ControlReleased And GameState\MinTimeSinglePlayerGameOver <= 0
+    ChangeGameState(@GameState, #StartMenu)
+  EndIf
+EndProcedure
+
 Procedure Update(Elapsed.f)
+  If #DEBUG
+    If KeyboardReleased(#PB_Key_G)
+      ChangeGameState(@GameState, #SinglePlayerGameOver)
+    EndIf
+  EndIf
+  
   If GameState\CurrentGameState = #Playing
     CheckKeys()
     If PKeyReleased
@@ -1377,6 +1432,9 @@ Procedure Update(Elapsed.f)
   ElseIf GameState\CurrentGameState = #Paused
     CheckKeys()
     UpdatePauseMenu(Elapsed)
+  ElseIf GameState\CurrentGameState = #SinglePlayerGameOver
+    CheckKeys()
+    UpdateSinglePlayerGameOver(Elapsed)
   EndIf
 
 EndProcedure

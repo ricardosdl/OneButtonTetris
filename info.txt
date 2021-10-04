@@ -2,3 +2,7 @@ https://tetris.wiki/Tetris_(Atari)
 
 Some music:
 https://opengameart.org/content/twister-tetris
+
+Sound effects:
+https://opengameart.org/content/game-over-bad-chest-sfx
+https://opengameart.org/content/game-over-soundold-school
