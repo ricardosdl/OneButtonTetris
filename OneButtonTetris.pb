@@ -1007,14 +1007,13 @@ Procedure UpdateFallingPiece(*PlayField.TPlayField, Elapsed.f)
   ;gets the number of configuration this piecetype has
   Protected NumConfigurations.a = PiecesConfiguration(*FallingPiece\Type)\NumConfigurations
   
-  ;gets the current template used by the falling piece
-  Protected PieceTemplateIdx.a = GetPieceTemplateIdx(*FallingPiece\Type, *FallingPiece\Configuration)
-  
-  ;TODO: put the code that changes the configuration before the code above, where we get
   ;the template for the current configuration
   If IsActionKeyActivated(*PlayField\ActionKey)
     *FallingPiece\Configuration = (*FallingPiece\Configuration + 1) % NumConfigurations
   EndIf
+  
+  ;gets the current template used by the falling piece
+  Protected PieceTemplateIdx.a = GetPieceTemplateIdx(*FallingPiece\Type, *FallingPiece\Configuration)
   
   ;check hit with bottom of playfield
   Protected i.u, j.u
