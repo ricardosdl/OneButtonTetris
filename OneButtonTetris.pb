@@ -150,6 +150,23 @@ Structure TStartMenu
   NumPlayers.a
 EndStructure
 
+Prototype.a UpdateParticleProc(*Particle, Elapsed.f)
+Prototype.a DrawParticleProc(*Particle, Elapsed.f)
+Structure TParticle
+  x.f;position x
+  y.f;postion y
+  w.f;width
+  h.f;height
+  Vx.f;velocity x
+  Vy.f;velocity y
+  Sprite.i;the sprite that will be displayed
+  Transparency.a
+  Active.a;#true of active #false if not
+  Time.f;if > 0 the particle is active or alive
+  Update.UpdateParticleProc
+  Draw.UpdateParticleProc
+EndStructure
+
 
 Global ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
