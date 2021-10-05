@@ -71,6 +71,7 @@ Enumeration TSounds
   #PauseSound
   #UnpauseSound
   #GameOverSound
+  #WinnerSound
 EndEnumeration
 
 Structure TGameState
@@ -213,6 +214,7 @@ Procedure LoadSounds()
   LoadSound(#PauseSound, "assets\sfx\pause.ogg")
   LoadSound(#UnpauseSound, "assets\sfx\unpause.ogg")
   LoadSound(#GameOverSound, "assets\sfx\gameover.ogg")
+  LoadSound(#WinnerSound, "assets\sfx\winner.ogg")
   
   
 EndProcedure
@@ -1339,7 +1341,7 @@ Procedure ChangeGameState(*GameState.TGameState, NewGameState.a)
       
     Case #MultiplayerGameOver
       StopSoundEffect(#MainMusic)
-      ;TODO: play winning music
+      PlaySoundEffect(#WinnerSound)
       *GameState\MinTimeGameOver = 3.0
       
   EndSelect
