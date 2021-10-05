@@ -73,6 +73,7 @@ Enumeration TSounds
   #UnpauseSound
   #GameOverSound
   #WinnerSound
+  #TimeUpSound
 EndEnumeration
 
 Structure TGameState
@@ -135,6 +136,7 @@ Structure TPlayfieldsDifficulty
   FallingPiecePositionTimer.f
   FallTime.f
   TimeUntilNextDifficulty.f
+  PlayingTimeUp.a
   CurrentDifficulty.a
 EndStructure
 
@@ -224,7 +226,7 @@ Procedure LoadSounds()
   LoadSound(#UnpauseSound, "assets\sfx\unpause.ogg")
   LoadSound(#GameOverSound, "assets\sfx\gameover.ogg")
   LoadSound(#WinnerSound, "assets\sfx\winner.ogg")
-  
+  LoadSound(#TimeUpSound, "assets\sfx\timeup.ogg")
   
 EndProcedure
 
@@ -1377,6 +1379,7 @@ Procedure InitPlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty)
   *PlayfieldsDifficulty\FallingPieceWheelTimer = #Initial_Falling_Piece_Position_Timer
   *PlayfieldsDifficulty\FallTime = #Initial_Fall_Time
   *PlayfieldsDifficulty\TimeUntilNextDifficulty = #Time_Until_Next_Difficulty
+  *PlayfieldsDifficulty\PlayingTimeUp = #False
   *PlayfieldsDifficulty\CurrentDifficulty = 0;first difficulty
 EndProcedure
 
@@ -1512,11 +1515,22 @@ Procedure UpdatePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty
   If *PlayfieldsDifficulty\TimeUntilNextDifficulty <= 0
     *PlayfieldsDifficulty\TimeUntilNextDifficulty = #Time_Until_Next_Difficulty
     IncreasePlayfieldsDifficulty(*PlayfieldsDifficulty)
+    
+    *PlayfieldsDifficulty\PlayingTimeUp = #False
+    StopSoundEffect(#TimeUpSound)
+    
     Debug "difficulty:" + Str(*PlayfieldsDifficulty\CurrentDifficulty)
     Debug "FallingPiecePositionTimer:" + StrF(*PlayfieldsDifficulty\FallingPiecePositionTimer)
     Debug "FallingPieceWheelTimer:" + StrF(*PlayfieldsDifficulty\FallingPieceWheelTimer)
     
   EndIf
+  
+  If Not *PlayfieldsDifficulty\PlayingTimeUp And *PlayfieldsDifficulty\TimeUntilNextDifficulty <= #Time_Up_Warning_Timer
+    ;CallDebugger
+    *PlayfieldsDifficulty\PlayingTimeUp = #True
+    PlaySoundEffect(#TimeUpSound, #True)
+  EndIf
+  
 EndProcedure
 
 Procedure Update(Elapsed.f)
