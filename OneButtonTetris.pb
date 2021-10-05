@@ -1,5 +1,4 @@
 ﻿EnableExplicit
-#DEBUG = #True
 #Game_Width = 800
 #Game_Height = 600
 #PlayFieldSize_Width = 10;pieces
@@ -1455,7 +1454,7 @@ Procedure UpdateMultiplayerGameOver(Elapsed.f)
 EndProcedure
 
 Procedure Update(Elapsed.f)
-  If #DEBUG
+  If #PB_Compiler_Debugger
     If KeyboardReleased(#PB_Key_G)
       ChangeGameState(@GameState, #SinglePlayerGameOver)
       ProcedureReturn
@@ -1510,7 +1509,7 @@ InitKeyboard()
 SoundInitiated = Bool(InitSound() <> 0)
 UseOGGSoundDecoder()
 LoadSounds()
-OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One-Button Tetris", #PB_Window_ScreenCentered)
+OpenWindow(1, 0,0, #Game_Width, #Game_Height,"One-Button Tetris", #PB_Window_ScreenCentered | #PB_Window_SystemMenu)
 OpenWindowedScreen(WindowID(1),0,0, #Game_Width, #Game_Height , 0, 0, 0)
 UsePNGImageDecoder()
 LoadBitmapFontSprite()
