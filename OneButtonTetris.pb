@@ -5,11 +5,13 @@
 #PlayFieldSize_Height = 20;pieces
 #Piece_Size = 4
 #Piece_Templates = 19
-#Fall_Time = 0.2
+#Initial_Fall_Time = 0.2
 ;#Falling_Piece_Wheel_Timer = 0.2
-#Falling_Piece_Wheel_Timer = 0.75
+#Intial_Falling_Piece_Wheel_Timer = 0.75;seconds
 ;#Falling_Piece_Position_Timer = 0.2
-#Falling_Piece_Position_Timer = 0.75
+#Initial_Falling_Piece_Position_Timer = 0.75;seconds
+#Time_Until_Next_Difficulty = 30            ;seconds
+#Time_Up_Warning_Timer = 4;seconds
 #Completed_Line_Score = 100
 #Max_PlayFields = 4
 #FallingPieceWheel_Pieces_Per_Column = 2
@@ -128,6 +130,14 @@ Structure TCompletedLines
   SequentialCompletedLines.a
 EndStructure
 
+Structure TPlayfieldsDifficulty
+  FallingPieceWheelTimer.f
+  FallingPiecePositionTimer.f
+  FallTime.f
+  TimeUntilNextDifficulty.f
+  CurrentDifficulty.a
+EndStructure
+
 Structure TPlayField
   x.f
   y.f
@@ -157,7 +167,7 @@ Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
 Global Piece_Width.w, Piece_Height.w
 Global PlayField.TPlayField, FallingPiece.TFallingPiece, FallingPieceWheel.TFallingPieceWheel,
        FallingPiecePosition.TFallingPiecePosition
-Global Dim PlayFields.TPlayField(#Max_PlayFields - 1)
+Global Dim PlayFields.TPlayField(#Max_PlayFields - 1), PlayfieldsDifficulty.TPlayfieldsDifficulty
 Global GameState.TGameState, NumPlayers.a = 1
 Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
 Global Dim FallingPieceWheelSprites(#Right4), FallingPiecePositionSprite.i = #False
@@ -182,7 +192,7 @@ Procedure StringListToAsciiList(StringList.s, List AsciiList.a(), Separator.s = 
   Next i
 EndProcedure
 
-Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 24)
+Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 24, Transparency.a = 255)
   ;ClipSprite(Bitmap_Font_Sprite, #PB_Default, #PB_Default, #PB_Default, #PB_Default)
   ;ZoomSprite(Bitmap_Font_Sprite, #PB_Default, #PB_Default)
   Protected i.i
@@ -190,7 +200,7 @@ Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 
     Protected AsciiValue.a = Asc(Mid(Text, i, 1))
     ClipSprite(Bitmap_Font_Sprite, (AsciiValue - 32) % 16 * 8, (AsciiValue - 32) / 16 * 12, 8, 12)
     ZoomSprite(Bitmap_Font_Sprite, CharWidthPx, CharHeightPx)
-    DisplayTransparentSprite(Bitmap_Font_Sprite, x + (i - 1) * CharWidthPx, y)
+    DisplayTransparentSprite(Bitmap_Font_Sprite, x + (i - 1) * CharWidthPx, y, Transparency)
   Next
 EndProcedure
 
@@ -830,6 +840,20 @@ Procedure DrawPlayFieldHUD(*PlayField.TPlayField)
   StopDrawing()
 EndProcedure
 
+Procedure DrawTimeUp(*Playfield.TPlayfield, *PlayfieldsDifficulty.TPlayfieldsDifficulty)
+  If *PlayfieldsDifficulty\TimeUntilNextDifficulty <= #Time_Up_Warning_Timer
+    Protected TimeUpText.s = "TIME UP!"
+    Protected TimeTextNumChars.u = Len(TimeUpText)
+    Protected TimeUpX.f, TimeUpY.f
+    TimeUpX = *Playfield\x + (*Playfield\Width - TimeTextNumChars * 16) / 2
+    TimeUpY = *Playfield\y + 5
+    Protected Timer.u = (*PlayfieldsDifficulty\TimeUntilNextDifficulty * 1000) / 200
+    Protected Transparency.a = 255 * (Timer % 2)
+    DrawBitmapText(TimeUpX, TimeUpY, TimeUpText, 16, 24, Transparency)
+  EndIf
+  
+EndProcedure
+
 Procedure DrawPlayfield(*PLayField.TPlayField)
   DrawFallingPiecePosition(*PLayField)
   
@@ -845,6 +869,8 @@ Procedure DrawPlayfield(*PLayField.TPlayField)
       DisplayTransparentSprite(GetPieceSpriteByColor(PieceColor), *PlayField\x + x * Piece_Width, *PlayField\y + y * Piece_Height)
     Next y
   Next x
+  
+  DrawTimeUp(*PLayField, @PlayfieldsDifficulty)
   
   DrawFallingPiece(*PLayField)
   
@@ -1128,7 +1154,7 @@ Procedure UpdateFallingPiece(*PlayField.TPlayField, Elapsed.f)
   If *FallingPiece\IsFalling
     
     *FallingPiece\FallingTimer + Elapsed
-    If *FallingPiece\FallingTimer >= #Fall_Time
+    If *FallingPiece\FallingTimer >= PlayfieldsDifficulty\FallTime
       ;fall down one line
       *FallingPiece\PosY + 1
       *FallingPiece\FallingTimer = 0.0
@@ -1145,7 +1171,7 @@ Procedure UpdateFallingPieceWheel(*PlayField.TPlayField, Elapsed.f)
   Protected *FallingPieceWheel.TFallingPieceWheel = @*PlayField\FallingPieceWheel
   
   *FallingPieceWheel\CurrentTimer + Elapsed
-  If *FallingPieceWheel\CurrentTimer > #Falling_Piece_Wheel_Timer And (Not *FallingPieceWheel\ChoosedPiece)
+  If *FallingPieceWheel\CurrentTimer >= PlayfieldsDifficulty\FallingPieceWheelTimer And (Not *FallingPieceWheel\ChoosedPiece)
     ;just cycle through the pieces
     *FallingPieceWheel\CurrentTimer  = 0
     *FallingPieceWheel\PieceType = (*FallingPieceWheel\PieceType + 1) % #Num_Piece_Types
@@ -1191,7 +1217,7 @@ Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
     *FallingPiecePosition\CurrentTimer + Elapsed
   EndIf
   
-  If *FallingPiecePosition\CurrentTimer > #Falling_Piece_Position_Timer
+  If *FallingPiecePosition\CurrentTimer >= PlayfieldsDifficulty\FallingPiecePositionTimer
     *FallingPiecePosition\Column = (*FallingPiecePosition\Column + 1) % #PlayFieldSize_Width
     *FallingPiecePosition\CurrentTimer = 0
   EndIf
@@ -1346,9 +1372,18 @@ Procedure ChangeGameState(*GameState.TGameState, NewGameState.a)
   EndSelect
 EndProcedure
 
+Procedure InitPlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty)
+  *PlayfieldsDifficulty\FallingPiecePositionTimer = #Initial_Falling_Piece_Position_Timer
+  *PlayfieldsDifficulty\FallingPieceWheelTimer = #Initial_Falling_Piece_Position_Timer
+  *PlayfieldsDifficulty\FallTime = #Initial_Fall_Time
+  *PlayfieldsDifficulty\TimeUntilNextDifficulty = #Time_Until_Next_Difficulty
+  *PlayfieldsDifficulty\CurrentDifficulty = 0;first difficulty
+EndProcedure
+
 Procedure StartNewGame(NumberOfPlayers.a)
   NumPlayers = NumberOfPlayers
   InitPlayFields(NumPlayers, PlayFields())
+  InitPlayfieldsDifficulty(@PlayfieldsDifficulty)
   CreateFallingPieceWheelSprites()
   CreateFallingPiecePositionSprite()
   CreatePiecesSprites()
@@ -1453,6 +1488,37 @@ Procedure UpdateMultiplayerGameOver(Elapsed.f)
   EndIf
 EndProcedure
 
+Procedure IncreasePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty)
+  *PlayfieldsDifficulty\CurrentDifficulty + 1
+  If *PlayfieldsDifficulty\CurrentDifficulty > 3
+    ;won't increase past 3
+    ProcedureReturn
+  EndIf
+  Select *PlayfieldsDifficulty\CurrentDifficulty
+    Case 1 To 2:
+      ;starts at #Initial_Falling_Piece_Position_Timer and #Intial_Falling_Piece_Wheel_Timer
+      *PlayfieldsDifficulty\FallingPiecePositionTimer - 0.25
+      *PlayfieldsDifficulty\FallingPieceWheelTimer - 0.25
+    Case 3:
+      *PlayfieldsDifficulty\FallingPiecePositionTimer / 2
+      *PlayfieldsDifficulty\FallingPieceWheelTimer/ 2
+    Default
+      
+  EndSelect
+EndProcedure
+
+Procedure UpdatePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty, Elapsed.f)
+  *PlayfieldsDifficulty\TimeUntilNextDifficulty - Elapsed
+  If *PlayfieldsDifficulty\TimeUntilNextDifficulty <= 0
+    *PlayfieldsDifficulty\TimeUntilNextDifficulty = #Time_Until_Next_Difficulty
+    IncreasePlayfieldsDifficulty(*PlayfieldsDifficulty)
+    Debug "difficulty:" + Str(*PlayfieldsDifficulty\CurrentDifficulty)
+    Debug "FallingPiecePositionTimer:" + StrF(*PlayfieldsDifficulty\FallingPiecePositionTimer)
+    Debug "FallingPieceWheelTimer:" + StrF(*PlayfieldsDifficulty\FallingPieceWheelTimer)
+    
+  EndIf
+EndProcedure
+
 Procedure Update(Elapsed.f)
   If #PB_Compiler_Debugger
     If KeyboardReleased(#PB_Key_G)
@@ -1488,6 +1554,7 @@ Procedure Update(Elapsed.f)
       UpdateScoringCompletedLines(@PlayFields(i - 1), Elapsed)
     Next i
     UpdateGameOverPlayFields(Elapsed)
+    UpdatePlayfieldsDifficulty(@PlayfieldsDifficulty, Elapsed)
   ElseIf GameState\CurrentGameState = #StartMenu
     UpdateStartMenu(Elapsed)
   ElseIf GameState\CurrentGameState = #Paused
