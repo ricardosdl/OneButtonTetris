@@ -56,6 +56,7 @@ Enumeration TGameStates
   #Playing
   #Paused
   #SinglePlayerGameOver
+  #MultiplayerGameOver
 EndEnumeration
 
 Enumeration TActionKey
@@ -75,7 +76,8 @@ EndEnumeration
 Structure TGameState
   CurrentGameState.a
   OldGameState.a
-  MinTimeSinglePlayerGameOver.f
+  MinTimeGameOver.f
+  MultiplayerWinnerPlayerID.a
 EndStructure
 
 Structure TPieceTemplate
@@ -927,9 +929,36 @@ Procedure DrawSinglePlayerGameOver()
   KeyTextX = (ScreenWidth() - (KeyTextNumChars * 16)) / 2
   KeyTextY = ScoreTextY + 24 + 10
   DrawBitmapText(KeyTextX, KeyTextY, KeyText)
+EndProcedure
+
+Procedure DrawMultiplayerGameOver()
+  Protected WinnerCharWidth.a = 32
+  Protected WinnerCharHeight.a = 48
+  
+  Protected WinnerText.s = "WINNER"
+  Protected WinnerTextNumChars.u = Len(WinnerText)
+  Protected WinnerTextX.f, WinnerTextY.f
+  WinnerTextX = (ScreenWidth() - (WinnerTextNumChars * WinnerCharWidth)) / 2
+  WinnerTextY = 100
+  DrawBitmapText(WinnerTextX, WinnerTextY, WinnerText, WinnerCharWidth, WinnerCharHeight)
   
   
+  Protected PlayerCharWidth.a = 24
+  Protected PlayerCharHeight.a = 36
   
+  Protected PlayerWinnerText.s = "Player " + Str(GameState\MultiplayerWinnerPlayerID)
+  Protected PlayerWinnerTextNumChars.u = Len(PlayerWinnerText)
+  Protected PlayerWinnerTextX.f, PlayerWinnerTextY.f
+  PlayerWinnerTextX = (ScreenWidth() - (PlayerWinnerTextNumChars * PlayerCharWidth)) / 2
+  PlayerWinnerTextY = WinnerTextY + WinnerCharHeight + 10
+  DrawBitmapText(PlayerWinnerTextX, PlayerWinnerTextY, PlayerWinnerText, PlayerCharWidth, PlayerCharHeight)
+  
+  Protected KeyText.s = "Left Control to go back"
+  Protected KeyTextNumChars.u = Len(KeyText)
+  Protected KeyTextX.f, KeyTextY.f
+  KeyTextX = (ScreenWidth() - (KeyTextNumChars * 16)) / 2
+  KeyTextY = PlayerWinnerTextY + PlayerCharHeight + 10
+  DrawBitmapText(KeyTextX, KeyTextY, KeyText)
   
 EndProcedure
 
@@ -946,6 +975,9 @@ Procedure Draw()
     DrawPlayFields()
     DrawSinglePlayerGameOver()
     
+  ElseIf GameState\CurrentGameState = #MultiplayerGameOver
+    DrawPlayFields()
+    DrawMultiplayerGameOver()
   EndIf
 EndProcedure
 
@@ -1303,7 +1335,12 @@ Procedure ChangeGameState(*GameState.TGameState, NewGameState.a)
     Case #SinglePlayerGameOver
       StopSoundEffect(#MainMusic)
       PlaySoundEffect(#GameOverSound)
-      *GameState\MinTimeSinglePlayerGameOver = 2.0
+      *GameState\MinTimeGameOver = 2.0
+      
+    Case #MultiplayerGameOver
+      StopSoundEffect(#MainMusic)
+      ;TODO: play winning music
+      *GameState\MinTimeGameOver = 3.0
       
   EndSelect
 EndProcedure
@@ -1365,23 +1402,25 @@ EndProcedure
 Procedure UpdateGameOverPlayFields(Elapsed.f)
   If NumPlayers = 1
     If PlayFields(0)\State = #GameOver
-      ChangeGameState(@GameState, #StartMenu)
-      ProcedureReturn
+      ChangeGameState(@GameState, #SinglePlayerGameOver)
     EndIf
     ProcedureReturn
   EndIf
   
   Protected i.a
-  Protected AlivePlayers.a = 0
+  Protected AlivePlayers.a = 0, WinnerPlayerID.a
   For i = 1 To NumPlayers
     If PlayFields(i - 1)\State <> #GameOver
       AlivePlayers + 1
+      ;save the playerid, when there is only one this will be correct
+      WinnerPlayerID = PlayFields(i - 1)\PlayerID
     EndIf
   Next
   
   If AlivePlayers = 1
     ;we have a winner
-    ChangeGameState(@GameState, #StartMenu)
+    GameState\MultiplayerWinnerPlayerID = WinnerPlayerID
+    ChangeGameState(@GameState, #MultiplayerGameOver)
   EndIf
   
 
@@ -1399,8 +1438,16 @@ Procedure PausePlayingGame()
 EndProcedure
 
 Procedure UpdateSinglePlayerGameOver(Elapsed.f)
-  GameState\MinTimeSinglePlayerGameOver - Elapsed
-  If ControlReleased And GameState\MinTimeSinglePlayerGameOver <= 0
+  GameState\MinTimeGameOver - Elapsed
+  If ControlReleased And GameState\MinTimeGameOver <= 0
+    ChangeGameState(@GameState, #StartMenu)
+  EndIf
+EndProcedure
+
+Procedure UpdateMultiplayerGameOver(Elapsed.f)
+  GameState\MinTimeGameOver - Elapsed
+  Protected AnyActionKeyReleased.a = Bool(ControlReleased Or SpaceKeyReleased Or BackspaceReleased Or DownKeyReleased)
+  If AnyActionKeyReleased And GameState\MinTimeGameOver <= 0
     ChangeGameState(@GameState, #StartMenu)
   EndIf
 EndProcedure
@@ -1409,6 +1456,19 @@ Procedure Update(Elapsed.f)
   If #DEBUG
     If KeyboardReleased(#PB_Key_G)
       ChangeGameState(@GameState, #SinglePlayerGameOver)
+      ProcedureReturn
+    EndIf
+    
+    If KeyboardReleased(#PB_Key_H)
+      ;randomly sets one of the playfields as the winner (setting others to gameover state)
+      Protected RandomWinner.a = Random(NumPlayers, 1), PlayerID.a
+      For PlayerID = 1 To NumPlayers
+        If PlayFields(PlayerID - 1)\PlayerID = RandomWinner
+          ;this will be the winner
+          Continue
+        EndIf
+        PlayFields(PlayerID - 1)\State = #GameOver
+      Next
     EndIf
   EndIf
   
@@ -1435,6 +1495,9 @@ Procedure Update(Elapsed.f)
   ElseIf GameState\CurrentGameState = #SinglePlayerGameOver
     CheckKeys()
     UpdateSinglePlayerGameOver(Elapsed)
+  ElseIf GameState\CurrentGameState = #MultiplayerGameOver
+    CheckKeys()
+    UpdateMultiplayerGameOver(Elapsed)
   EndIf
 
 EndProcedure
