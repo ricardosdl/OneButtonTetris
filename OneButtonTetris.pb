@@ -11,7 +11,7 @@
 ;#Falling_Piece_Position_Timer = 0.2
 #Initial_Falling_Piece_Position_Timer = 0.75;seconds
 #Max_Difficulty = 4
-#Time_Until_Next_Difficulty = 30            ;seconds
+#Time_Until_Next_Difficulty = 40            ;seconds
 #Time_Up_Warning_Timer = 4;seconds
 #Completed_Line_Score = 100
 #Max_PlayFields = 4
