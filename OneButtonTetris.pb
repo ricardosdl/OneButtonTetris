@@ -77,13 +77,6 @@ Enumeration TSounds
   #TimeUpSound
 EndEnumeration
 
-Structure TGameState
-  CurrentGameState.a
-  OldGameState.a
-  MinTimeGameOver.f
-  MultiplayerWinnerPlayerID.a
-EndStructure
-
 Structure TPieceTemplate
   Array PieceTemplate.u(#Piece_Size - 1, #Piece_Size - 1)
 EndStructure
@@ -142,6 +135,24 @@ Structure TPlayfieldsDifficulty
   MaxDifficulty.a
 EndStructure
 
+Structure TPlayfieldRankPosition
+  PlayerID.a
+  Score.l
+  TimeSurvived.f;in seconds
+EndStructure
+
+Structure TPlayfieldsRanking
+  List RankPositions.TPlayfieldRankPosition()
+EndStructure
+
+Structure TGameState
+  CurrentGameState.a
+  OldGameState.a
+  MinTimeGameOver.f
+  MultiplayerWinnerPlayerID.a
+  PlayfieldsRanking.TPlayfieldsRanking
+EndStructure
+
 Structure TPlayField
   x.f
   y.f
@@ -157,6 +168,7 @@ Structure TPlayField
   Score.l
   PlayerID.a
   ActionKey.a
+  TimeSurvived.f;in seconds
 EndStructure
 
 Structure TStartMenu
@@ -411,6 +423,7 @@ Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f, PlayerID.a)
   *PlayField\Score = 0
   *PlayField\PlayerID = PlayerID
   *PlayField\ActionKey = GetPlayfieldActionKey(PlayerID)
+  *PlayField\TimeSurvived = 0.0
   ChangePlayFieldState(*PlayField, #ChoosingFallingPiecePosition)
   
 EndProcedure
@@ -949,11 +962,18 @@ Procedure DrawSinglePlayerGameOver()
   ScoreTextY = GameOverY + GameOverCharHeight + 10
   DrawBitmapText(ScoreTextX, ScoreTextY, ScoreText)
   
+  Protected SurvivedText.s = "Time Survived:" + StrF(PlayFields(0)\TimeSurvived, 2)
+  Protected SurvivedTextNumChars.u = Len(SurvivedText)
+  Protected SurvivedTextX.f, SurvivedTextY.f
+  SurvivedTextX = (ScreenWidth() - (SurvivedTextNumChars * 16)) / 2
+  SurvivedTextY = ScoreTextY + GameOverCharHeight + 10
+  DrawBitmapText(SurvivedTextX, SurvivedTextY, SurvivedText)
+  
   Protected KeyText.s = "Left Control to go back"
   Protected KeyTextNumChars.u = Len(KeyText)
   Protected KeyTextX.f, KeyTextY.f
   KeyTextX = (ScreenWidth() - (KeyTextNumChars * 16)) / 2
-  KeyTextY = ScoreTextY + 24 + 10
+  KeyTextY = SurvivedTextY + 24 + 10
   DrawBitmapText(KeyTextX, KeyTextY, KeyText)
 EndProcedure
 
@@ -961,7 +981,7 @@ Procedure DrawMultiplayerGameOver()
   Protected WinnerCharWidth.a = 32
   Protected WinnerCharHeight.a = 48
   
-  Protected WinnerText.s = "WINNER"
+  Protected WinnerText.s = "RANKING"
   Protected WinnerTextNumChars.u = Len(WinnerText)
   Protected WinnerTextX.f, WinnerTextY.f
   WinnerTextX = (ScreenWidth() - (WinnerTextNumChars * WinnerCharWidth)) / 2
@@ -969,21 +989,32 @@ Procedure DrawMultiplayerGameOver()
   DrawBitmapText(WinnerTextX, WinnerTextY, WinnerText, WinnerCharWidth, WinnerCharHeight)
   
   
-  Protected PlayerCharWidth.a = 24
-  Protected PlayerCharHeight.a = 36
+  Protected PlayerCharWidth.a = 16
+  Protected PlayerCharHeight.a = 24
+  Protected i.a = 1
+  ForEach GameState\PlayfieldsRanking\RankPositions()
+    Protected PlayerID.s = "Player " + Str(GameState\PlayfieldsRanking\RankPositions()\PlayerID)
+    Protected Score.s = "Score:" + GameState\PlayfieldsRanking\RankPositions()\Score
+    Protected Survived.s = "Survived:" + StrF(GameState\PlayfieldsRanking\RankPositions()\TimeSurvived, 2)
+    
+    Protected RankText.s = PlayerID + "|" + Score + "|" + Survived
+    Protected RankTextNumChars.u = Len(RankText)
+    Protected RankTextX.f, RankTextY.f
+    RankTextX = (ScreenWidth() - (RankTextNumChars * PlayerCharWidth)) / 2
+    RankTextY = (WinnerTextY + WinnerCharHeight + 10) + ((i - 1) * (PlayerCharHeight + 10))
+    DrawBitmapText(RankTextX, RankTextY, RankText, PlayerCharWidth, PlayerCharHeight)
+    
+    i + 1
+  Next
   
-  Protected PlayerWinnerText.s = "Player " + Str(GameState\MultiplayerWinnerPlayerID)
-  Protected PlayerWinnerTextNumChars.u = Len(PlayerWinnerText)
-  Protected PlayerWinnerTextX.f, PlayerWinnerTextY.f
-  PlayerWinnerTextX = (ScreenWidth() - (PlayerWinnerTextNumChars * PlayerCharWidth)) / 2
-  PlayerWinnerTextY = WinnerTextY + WinnerCharHeight + 10
-  DrawBitmapText(PlayerWinnerTextX, PlayerWinnerTextY, PlayerWinnerText, PlayerCharWidth, PlayerCharHeight)
+  
+  
   
   Protected KeyText.s = "Left Control to go back"
   Protected KeyTextNumChars.u = Len(KeyText)
   Protected KeyTextX.f, KeyTextY.f
   KeyTextX = (ScreenWidth() - (KeyTextNumChars * 16)) / 2
-  KeyTextY = PlayerWinnerTextY + PlayerCharHeight + 10
+  KeyTextY = RankTextY + PlayerCharHeight + 10
   DrawBitmapText(KeyTextX, KeyTextY, KeyText)
   
 EndProcedure
@@ -1439,6 +1470,28 @@ Procedure UpdateStartMenu(Elapsed.f)
   
 EndProcedure
 
+Procedure GetPlayfieldsRanking(*PlayfieldsRanking.TPlayfieldsRanking)
+  Protected i.a
+  
+  ClearList(*PlayfieldsRanking\RankPositions())
+  
+  
+  For i = 1 To NumPlayers
+    AddElement(*PlayfieldsRanking\RankPositions())
+    *PlayfieldsRanking\RankPositions()\PlayerID = PlayFields(i - 1)\PlayerID
+    *PlayfieldsRanking\RankPositions()\Score = PlayFields(i - 1)\Score
+    *PlayfieldsRanking\RankPositions()\TimeSurvived = PlayFields(i - 1)\TimeSurvived
+  Next
+  
+  ;first we sort by time survived
+  SortStructuredList(*PlayfieldsRanking\RankPositions(), #PB_Sort_Descending, OffsetOf(TPlayfieldRankPosition\TimeSurvived), TypeOf(TPlayfieldRankPosition\TimeSurvived))
+  ;and then by score making the score the main attribute to win
+  SortStructuredList(*PlayfieldsRanking\RankPositions(), #PB_Sort_Descending, OffsetOf(TPlayfieldRankPosition\Score), TypeOf(TPlayfieldRankPosition\Score))
+  
+  
+  
+EndProcedure
+
 Procedure UpdateGameOverPlayFields(Elapsed.f)
   If NumPlayers = 1
     If PlayFields(0)\State = #GameOver
@@ -1448,18 +1501,15 @@ Procedure UpdateGameOverPlayFields(Elapsed.f)
   EndIf
   
   Protected i.a
-  Protected AlivePlayers.a = 0, WinnerPlayerID.a
+  Protected AlivePlayers.a = 0
   For i = 1 To NumPlayers
     If PlayFields(i - 1)\State <> #GameOver
       AlivePlayers + 1
-      ;save the playerid, when there is only one this will be correct
-      WinnerPlayerID = PlayFields(i - 1)\PlayerID
     EndIf
   Next
   
-  If AlivePlayers = 1
-    ;we have a winner
-    GameState\MultiplayerWinnerPlayerID = WinnerPlayerID
+  If AlivePlayers = 0
+    GetPlayfieldsRanking(@GameState\PlayfieldsRanking)
     ChangeGameState(@GameState, #MultiplayerGameOver)
   EndIf
   
@@ -1532,6 +1582,13 @@ Procedure UpdatePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty
   
 EndProcedure
 
+Procedure UpdateTimeSurvived(*Playfield.TPlayField, Elapsed.f)
+  If *Playfield\State <> #GameOver
+    *Playfield\TimeSurvived + Elapsed
+  EndIf
+EndProcedure
+
+
 Procedure Update(Elapsed.f)
   If #PB_Compiler_Debugger
     If KeyboardReleased(#PB_Key_G)
@@ -1540,16 +1597,25 @@ Procedure Update(Elapsed.f)
     EndIf
     
     If KeyboardReleased(#PB_Key_H)
-      ;randomly sets one of the playfields as the winner (setting others to gameover state)
+      ;randomly sets one of the playfields as the last survivor
       Protected RandomWinner.a = Random(NumPlayers, 1), PlayerID.a
       For PlayerID = 1 To NumPlayers
         If PlayFields(PlayerID - 1)\PlayerID = RandomWinner
-          ;this will be the winner
+          ;this will be the last survivor
           Continue
         EndIf
         PlayFields(PlayerID - 1)\State = #GameOver
       Next
     EndIf
+    
+    If KeyboardReleased(#PB_Key_J)
+      ;sets all playfields to game over
+      For PlayerID = 1 To NumPlayers
+        PlayFields(PlayerID - 1)\State = #GameOver
+      Next
+    EndIf
+    
+    
   EndIf
   
   If GameState\CurrentGameState = #Playing
@@ -1565,6 +1631,7 @@ Procedure Update(Elapsed.f)
       UpdateFallingPieceWheel(@PlayFields(i - 1), Elapsed)
       UpdateFallingPiecePosition(@PlayFields(i - 1), Elapsed)
       UpdateScoringCompletedLines(@PlayFields(i - 1), Elapsed)
+      UpdateTimeSurvived(@PlayFields(i - 1), Elapsed)
     Next i
     UpdateGameOverPlayFields(Elapsed)
     UpdatePlayfieldsDifficulty(@PlayfieldsDifficulty, Elapsed)
