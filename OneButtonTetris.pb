@@ -10,7 +10,7 @@
 #Intial_Falling_Piece_Wheel_Timer = 0.75;seconds
 ;#Falling_Piece_Position_Timer = 0.2
 #Initial_Falling_Piece_Position_Timer = 0.75;seconds
-#Max_Difficulty = 3
+#Max_Difficulty = 4
 #Time_Until_Next_Difficulty = 30            ;seconds
 #Time_Up_Warning_Timer = 4;seconds
 #Completed_Line_Score = 100
@@ -1499,15 +1499,11 @@ Procedure IncreasePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficul
     ProcedureReturn
   EndIf
   Select *PlayfieldsDifficulty\CurrentDifficulty
-    Case 1 To 2:
+    Case 1 To 4:
       ;starts at #Initial_Falling_Piece_Position_Timer and #Intial_Falling_Piece_Wheel_Timer
-      *PlayfieldsDifficulty\FallingPiecePositionTimer - 0.25
-      *PlayfieldsDifficulty\FallingPieceWheelTimer - 0.25
-      *PlayfieldsDifficulty\FallTime - 0.02;less 20 ms
-    Case 3:
-      *PlayfieldsDifficulty\FallingPiecePositionTimer / 2
-      *PlayfieldsDifficulty\FallingPieceWheelTimer/ 2
-      *PlayfieldsDifficulty\FallTime - 0.02;less 20 ms
+      *PlayfieldsDifficulty\FallingPiecePositionTimer - 0.15;less 150 ms
+      *PlayfieldsDifficulty\FallingPieceWheelTimer - 0.15;less 150 ms
+      *PlayfieldsDifficulty\FallTime - 0.015;less 15 ms
     Default
       
   EndSelect
