@@ -1301,10 +1301,18 @@ Procedure.a FillPlayfieldLine(*Playfield.TPlayField, Line.a)
   EndIf
   
   Protected CurrentColumn.a
+  Protected EmptyColumn.a = Random(#PlayFieldSize_Width - 1)
   For CurrentColumn = 0 To #PlayFieldSize_Width - 1
-    Protected Color.u = RandomColor()
-    If CurrentColumn & 1
-      ;if it is odd, we fill and put a color
+    If CurrentColumn = EmptyColumn
+      ;a random column will be always empty
+      *Playfield\PlayField(CurrentColumn, Line) = #Empty
+      Continue
+    EndIf
+    
+    ;all other columns have a 50% chance of being empty
+    If Random(1)
+      Protected Color.u = RandomColor()
+      ;we fill and put a color
       *Playfield\PlayField(CurrentColumn, Line) = #Filled | Color
     Else
       ;if it is even, it will be empty
