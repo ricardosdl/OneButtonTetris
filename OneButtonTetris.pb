@@ -1108,10 +1108,6 @@ Procedure SaveFallingPieceOnPlayField(*PlayField.TPlayField)
   EndIf
 EndProcedure
 
-Procedure LaunchRandomFallingPiece()
-  ;LaunchFallingPiece(Random(#Right4, #Line))
-EndProcedure
-
 Procedure.i IsActionKeyActivated(ActionKey.a)
   Select ActionKey
     Case #LeftControl
