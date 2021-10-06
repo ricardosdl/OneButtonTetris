@@ -10,6 +10,7 @@
 #Intial_Falling_Piece_Wheel_Timer = 0.75;seconds
 ;#Falling_Piece_Position_Timer = 0.2
 #Initial_Falling_Piece_Position_Timer = 0.75;seconds
+#Max_Difficulty = 3
 #Time_Until_Next_Difficulty = 30            ;seconds
 #Time_Up_Warning_Timer = 4;seconds
 #Completed_Line_Score = 100
@@ -138,6 +139,7 @@ Structure TPlayfieldsDifficulty
   TimeUntilNextDifficulty.f
   PlayingTimeUp.a
   CurrentDifficulty.a
+  MaxDifficulty.a
 EndStructure
 
 Structure TPlayField
@@ -268,20 +270,15 @@ Procedure ResumeSoundEffect(Sound.a)
   
 EndProcedure
 
-
-Procedure.a SetupNumPlayers()
-  Protected TextNumPlayers.s = InputRequester("Number of Players", "Type the number of players (1-4)", "1")
-  TextNumPlayers = Trim(TextNumPlayers)
-  NumPlayers = Val(TextNumPlayers)
-  If NumPlayers <= 0
-    NumPlayers = 1
+;HasExecuted will tell if the soundstatus has been executed
+;because the sound might not been iniated
+Procedure.i SoundEffectStatus(Sound.a, *HasExecuted.Ascii)
+  If Not SoundInitiated
+    *HasExecuted\a = #False
+    ProcedureReturn
   EndIf
-  
-  If NumPlayers > #Max_PlayFields
-    NumPlayers = #Max_PlayFields
-  EndIf
-  
-  ProcedureReturn NumPlayers
+  *HasExecuted\a = #True
+  ProcedureReturn SoundStatus(Sound)
   
 EndProcedure
 
@@ -1359,15 +1356,18 @@ Procedure ChangeGameState(*GameState.TGameState, NewGameState.a)
       
     Case #Paused
       PauseSoundEffect(#MainMusic)
+      PauseSoundEffect(#TimeUpSound)
       PlaySoundEffect(#PauseSound)
       
     Case #SinglePlayerGameOver
       StopSoundEffect(#MainMusic)
+      StopSoundEffect(#TimeUpSound)
       PlaySoundEffect(#GameOverSound)
       *GameState\MinTimeGameOver = 2.0
       
     Case #MultiplayerGameOver
       StopSoundEffect(#MainMusic)
+      StopSoundEffect(#TimeUpSound)
       PlaySoundEffect(#WinnerSound)
       *GameState\MinTimeGameOver = 3.0
       
@@ -1381,6 +1381,7 @@ Procedure InitPlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty)
   *PlayfieldsDifficulty\TimeUntilNextDifficulty = #Time_Until_Next_Difficulty
   *PlayfieldsDifficulty\PlayingTimeUp = #False
   *PlayfieldsDifficulty\CurrentDifficulty = 0;first difficulty
+  *PlayfieldsDifficulty\MaxDifficulty = #Max_Difficulty
 EndProcedure
 
 Procedure StartNewGame(NumberOfPlayers.a)
@@ -1493,8 +1494,8 @@ EndProcedure
 
 Procedure IncreasePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty)
   *PlayfieldsDifficulty\CurrentDifficulty + 1
-  If *PlayfieldsDifficulty\CurrentDifficulty > 3
-    ;won't increase past 3
+  If *PlayfieldsDifficulty\CurrentDifficulty > *PlayfieldsDifficulty\MaxDifficulty
+    ;won't increase past maxdifficulty
     ProcedureReturn
   EndIf
   Select *PlayfieldsDifficulty\CurrentDifficulty
@@ -1502,9 +1503,11 @@ Procedure IncreasePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficul
       ;starts at #Initial_Falling_Piece_Position_Timer and #Intial_Falling_Piece_Wheel_Timer
       *PlayfieldsDifficulty\FallingPiecePositionTimer - 0.25
       *PlayfieldsDifficulty\FallingPieceWheelTimer - 0.25
+      *PlayfieldsDifficulty\FallTime - 0.02;less 20 ms
     Case 3:
       *PlayfieldsDifficulty\FallingPiecePositionTimer / 2
       *PlayfieldsDifficulty\FallingPieceWheelTimer/ 2
+      *PlayfieldsDifficulty\FallTime - 0.02;less 20 ms
     Default
       
   EndSelect
