@@ -854,7 +854,7 @@ EndProcedure
 
 Procedure DrawTimeUp(*Playfield.TPlayfield, *PlayfieldsDifficulty.TPlayfieldsDifficulty)
   If *PlayfieldsDifficulty\TimeUntilNextDifficulty <= #Time_Up_Warning_Timer
-    Protected TimeUpText.s = "TIME UP!"
+    Protected TimeUpText.s = "FASTER!"
     Protected TimeTextNumChars.u = Len(TimeUpText)
     Protected TimeUpX.f, TimeUpY.f
     TimeUpX = *Playfield\x + (*Playfield\Width - TimeTextNumChars * 16) / 2
