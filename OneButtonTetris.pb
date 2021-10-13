@@ -170,7 +170,7 @@ Structure TPlayField
   PlayerID.a
   ActionKey.a
   TimeSurvived.f;in seconds
-  IdleTimer.f
+  IdleTimer.f;in seconds
 EndStructure
 
 Structure TStartMenu
