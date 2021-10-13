@@ -857,6 +857,10 @@ Procedure DrawPlayFieldHUD(*PlayField.TPlayField)
 EndProcedure
 
 Procedure DrawTimeUp(*Playfield.TPlayfield, *PlayfieldsDifficulty.TPlayfieldsDifficulty)
+  If *Playfield\State = #GameOver
+    ProcedureReturn
+  EndIf
+  
   If *PlayfieldsDifficulty\TimeUntilNextDifficulty <= #Time_Up_Warning_Timer
     Protected TimeUpText.s = "FASTER!"
     Protected TimeTextNumChars.u = Len(TimeUpText)
@@ -1307,6 +1311,9 @@ Procedure BringPlayFieldOneLineDown(*PlayField.TPLayField, StartLine.b)
 EndProcedure
 
 Procedure BringPlayFieldOneLineUp(*Playfield.TPlayfield, StartLine.b)
+  If *Playfield\State = #GameOver
+    ProcedureReturn
+  EndIf
   Protected CurrentLine.b, CurrentColumn.a
   For CurrentLine = 1 To #PlayFieldSize_Height - 1
     For CurrentColumn = 0 To #PlayFieldSize_Width - 1
@@ -1334,6 +1341,9 @@ Procedure.u RandomColor()
 EndProcedure
 
 Procedure.a FillPlayfieldLine(*Playfield.TPlayField, Line.a)
+  If *Playfield\State = #GameOver
+    ProcedureReturn
+  EndIf
   If Not IsCellWithinPlayField(0, Line)
     ProcedureReturn #False
   EndIf
