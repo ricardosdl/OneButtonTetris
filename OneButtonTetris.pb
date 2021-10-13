@@ -11,7 +11,8 @@
 ;#Falling_Piece_Position_Timer = 0.2
 #Initial_Falling_Piece_Position_Timer = 0.75;seconds
 #Max_Difficulty = 7
-#Time_Until_Next_Difficulty = 40            ;seconds
+#Time_Until_Next_Difficulty = 40.0            ;seconds
+#Initial_Idle_Timer = #Time_Until_Next_Difficulty / 3
 #Time_Up_Warning_Timer = 4;seconds
 #Completed_Line_Score = 100
 #Max_PlayFields = 4
@@ -134,6 +135,7 @@ Structure TPlayfieldsDifficulty
   PlayingTimeUp.a
   CurrentDifficulty.a
   MaxDifficulty.a
+  CurrentIdleTimer.f
 EndStructure
 
 Structure TPlayfieldRankPosition
@@ -875,7 +877,7 @@ Procedure DrawTimeUp(*Playfield.TPlayfield, *PlayfieldsDifficulty.TPlayfieldsDif
 EndProcedure
 
 Procedure DrawIdleWarning(*PlayField.TPlayfield)
-  If *PlayField\IdleTimer >= (#Time_Until_Next_Difficulty / 3)
+  If *PlayField\IdleTimer >= PlayfieldsDifficulty\CurrentIdleTimer
     Protected IdleText.s = "IDLE!"
     Protected IdleTextNumChars.u = Len(IdleText)
     Protected IdleTextX.f, IdleTextY.u
@@ -1466,6 +1468,7 @@ Procedure InitPlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty)
   *PlayfieldsDifficulty\PlayingTimeUp = #False
   *PlayfieldsDifficulty\CurrentDifficulty = 0;first difficulty
   *PlayfieldsDifficulty\MaxDifficulty = #Max_Difficulty
+  *PlayfieldsDifficulty\CurrentIdleTimer = #Initial_Idle_Timer
 EndProcedure
 
 Procedure StartNewGame(NumberOfPlayers.a)
@@ -1607,11 +1610,16 @@ Procedure IncreasePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficul
       *PlayfieldsDifficulty\FallingPiecePositionTimer - 0.15;less 150 ms
       *PlayfieldsDifficulty\FallingPieceWheelTimer - 0.15;less 150 ms
       *PlayfieldsDifficulty\FallTime - 0.015             ;less 15 ms
-    Case 5 To 7:
+      *PlayfieldsDifficulty\CurrentIdleTimer - 2;less 2 seconds
+    Case 5:
+      *PlayfieldsDifficulty\FallTime - 0.015
+      *PlayfieldsDifficulty\CurrentIdleTimer - 2
+    Case 6 To 7:
       *PlayfieldsDifficulty\FallTime - 0.015             ;less 15 ms
     Default
       
   EndSelect
+  Debug "currentidletimer:" + StrF(*PlayfieldsDifficulty\CurrentIdleTimer)
 EndProcedure
 
 Procedure UpdatePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty, Elapsed.f)
@@ -1658,7 +1666,7 @@ Procedure UpdateIdleTimer(*Playfield.TPlayField, Elapsed.f)
   
   
   
-  If *Playfield\IdleTimer >= (#Time_Until_Next_Difficulty / 3 + 3)
+  If *Playfield\IdleTimer >= (PlayfieldsDifficulty\CurrentIdleTimer + 3)
     Select *Playfield\State
       Case #ChoosingFallingPiece
         ChooseCurrentPiece(*Playfield)
@@ -1670,7 +1678,7 @@ Procedure UpdateIdleTimer(*Playfield.TPlayField, Elapsed.f)
     
   EndIf
   
-  If *Playfield\IdleTimer >= (#Time_Until_Next_Difficulty / 3)
+  If *Playfield\IdleTimer >= PlayfieldsDifficulty\CurrentIdleTimer
     Protected HasExecuted.Ascii\a = #False
     Protected Status = SoundEffectStatus(#IdleSound, @HasExecuted)
     If HasExecuted\a
