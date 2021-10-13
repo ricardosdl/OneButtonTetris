@@ -5,11 +5,14 @@
 #PlayFieldSize_Height = 20;pieces
 #Piece_Size = 4
 #Piece_Templates = 19
-#Fall_Time = 0.2
+#Initial_Fall_Time = 0.2
 ;#Falling_Piece_Wheel_Timer = 0.2
-#Falling_Piece_Wheel_Timer = 0.75
+#Intial_Falling_Piece_Wheel_Timer = 0.75;seconds
 ;#Falling_Piece_Position_Timer = 0.2
-#Falling_Piece_Position_Timer = 0.75
+#Initial_Falling_Piece_Position_Timer = 0.75;seconds
+#Max_Difficulty = 4
+#Time_Until_Next_Difficulty = 40            ;seconds
+#Time_Up_Warning_Timer = 4;seconds
 #Completed_Line_Score = 100
 #Max_PlayFields = 4
 #FallingPieceWheel_Pieces_Per_Column = 2
@@ -71,14 +74,8 @@ Enumeration TSounds
   #UnpauseSound
   #GameOverSound
   #WinnerSound
+  #TimeUpSound
 EndEnumeration
-
-Structure TGameState
-  CurrentGameState.a
-  OldGameState.a
-  MinTimeGameOver.f
-  MultiplayerWinnerPlayerID.a
-EndStructure
 
 Structure TPieceTemplate
   Array PieceTemplate.u(#Piece_Size - 1, #Piece_Size - 1)
@@ -128,6 +125,34 @@ Structure TCompletedLines
   SequentialCompletedLines.a
 EndStructure
 
+Structure TPlayfieldsDifficulty
+  FallingPieceWheelTimer.f
+  FallingPiecePositionTimer.f
+  FallTime.f
+  TimeUntilNextDifficulty.f
+  PlayingTimeUp.a
+  CurrentDifficulty.a
+  MaxDifficulty.a
+EndStructure
+
+Structure TPlayfieldRankPosition
+  PlayerID.a
+  Score.l
+  TimeSurvived.f;in seconds
+EndStructure
+
+Structure TPlayfieldsRanking
+  List RankPositions.TPlayfieldRankPosition()
+EndStructure
+
+Structure TGameState
+  CurrentGameState.a
+  OldGameState.a
+  MinTimeGameOver.f
+  MultiplayerWinnerPlayerID.a
+  PlayfieldsRanking.TPlayfieldsRanking
+EndStructure
+
 Structure TPlayField
   x.f
   y.f
@@ -143,6 +168,7 @@ Structure TPlayField
   Score.l
   PlayerID.a
   ActionKey.a
+  TimeSurvived.f;in seconds
 EndStructure
 
 Structure TStartMenu
@@ -174,7 +200,7 @@ Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
 Global Piece_Width.w, Piece_Height.w
 Global PlayField.TPlayField, FallingPiece.TFallingPiece, FallingPieceWheel.TFallingPieceWheel,
        FallingPiecePosition.TFallingPiecePosition
-Global Dim PlayFields.TPlayField(#Max_PlayFields - 1)
+Global Dim PlayFields.TPlayField(#Max_PlayFields - 1), PlayfieldsDifficulty.TPlayfieldsDifficulty
 Global GameState.TGameState, NumPlayers.a = 1
 Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
 Global Dim FallingPieceWheelSprites(#Right4), FallingPiecePositionSprite.i = #False
@@ -199,7 +225,7 @@ Procedure StringListToAsciiList(StringList.s, List AsciiList.a(), Separator.s = 
   Next i
 EndProcedure
 
-Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 24)
+Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 24, Transparency.a = 255)
   ;ClipSprite(Bitmap_Font_Sprite, #PB_Default, #PB_Default, #PB_Default, #PB_Default)
   ;ZoomSprite(Bitmap_Font_Sprite, #PB_Default, #PB_Default)
   Protected i.i
@@ -207,7 +233,7 @@ Procedure DrawBitmapText(x.f, y.f, Text.s, CharWidthPx.a = 16, CharHeightPx.a = 
     Protected AsciiValue.a = Asc(Mid(Text, i, 1))
     ClipSprite(Bitmap_Font_Sprite, (AsciiValue - 32) % 16 * 8, (AsciiValue - 32) / 16 * 12, 8, 12)
     ZoomSprite(Bitmap_Font_Sprite, CharWidthPx, CharHeightPx)
-    DisplayTransparentSprite(Bitmap_Font_Sprite, x + (i - 1) * CharWidthPx, y)
+    DisplayTransparentSprite(Bitmap_Font_Sprite, x + (i - 1) * CharWidthPx, y, Transparency)
   Next
 EndProcedure
 
@@ -231,7 +257,7 @@ Procedure LoadSounds()
   LoadSound(#UnpauseSound, "assets\sfx\unpause.ogg")
   LoadSound(#GameOverSound, "assets\sfx\gameover.ogg")
   LoadSound(#WinnerSound, "assets\sfx\winner.ogg")
-  
+  LoadSound(#TimeUpSound, "assets\sfx\timeup.ogg")
   
 EndProcedure
 
@@ -273,20 +299,15 @@ Procedure ResumeSoundEffect(Sound.a)
   
 EndProcedure
 
-
-Procedure.a SetupNumPlayers()
-  Protected TextNumPlayers.s = InputRequester("Number of Players", "Type the number of players (1-4)", "1")
-  TextNumPlayers = Trim(TextNumPlayers)
-  NumPlayers = Val(TextNumPlayers)
-  If NumPlayers <= 0
-    NumPlayers = 1
+;HasExecuted will tell if the soundstatus has been executed
+;because the sound might not been iniated
+Procedure.i SoundEffectStatus(Sound.a, *HasExecuted.Ascii)
+  If Not SoundInitiated
+    *HasExecuted\a = #False
+    ProcedureReturn
   EndIf
-  
-  If NumPlayers > #Max_PlayFields
-    NumPlayers = #Max_PlayFields
-  EndIf
-  
-  ProcedureReturn NumPlayers
+  *HasExecuted\a = #True
+  ProcedureReturn SoundStatus(Sound)
   
 EndProcedure
 
@@ -419,6 +440,7 @@ Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f, PlayerID.a)
   *PlayField\Score = 0
   *PlayField\PlayerID = PlayerID
   *PlayField\ActionKey = GetPlayfieldActionKey(PlayerID)
+  *PlayField\TimeSurvived = 0.0
   ChangePlayFieldState(*PlayField, #ChoosingFallingPiecePosition)
   
 EndProcedure
@@ -847,6 +869,20 @@ Procedure DrawPlayFieldHUD(*PlayField.TPlayField)
   StopDrawing()
 EndProcedure
 
+Procedure DrawTimeUp(*Playfield.TPlayfield, *PlayfieldsDifficulty.TPlayfieldsDifficulty)
+  If *PlayfieldsDifficulty\TimeUntilNextDifficulty <= #Time_Up_Warning_Timer
+    Protected TimeUpText.s = "FASTER!"
+    Protected TimeTextNumChars.u = Len(TimeUpText)
+    Protected TimeUpX.f, TimeUpY.f
+    TimeUpX = *Playfield\x + (*Playfield\Width - TimeTextNumChars * 16) / 2
+    TimeUpY = *Playfield\y + 5
+    Protected Timer.u = (*PlayfieldsDifficulty\TimeUntilNextDifficulty * 1000) / 200
+    Protected Transparency.a = 255 * (Timer % 2)
+    DrawBitmapText(TimeUpX, TimeUpY, TimeUpText, 16, 24, Transparency)
+  EndIf
+  
+EndProcedure
+
 Procedure DrawPlayfield(*PLayField.TPlayField)
   DrawFallingPiecePosition(*PLayField)
   
@@ -862,6 +898,8 @@ Procedure DrawPlayfield(*PLayField.TPlayField)
       DisplayTransparentSprite(GetPieceSpriteByColor(PieceColor), *PlayField\x + x * Piece_Width, *PlayField\y + y * Piece_Height)
     Next y
   Next x
+  
+  DrawTimeUp(*PLayField, @PlayfieldsDifficulty)
   
   DrawFallingPiece(*PLayField)
   
@@ -941,11 +979,18 @@ Procedure DrawSinglePlayerGameOver()
   ScoreTextY = GameOverY + GameOverCharHeight + 10
   DrawBitmapText(ScoreTextX, ScoreTextY, ScoreText)
   
+  Protected SurvivedText.s = "Time Survived:" + StrF(PlayFields(0)\TimeSurvived, 2)
+  Protected SurvivedTextNumChars.u = Len(SurvivedText)
+  Protected SurvivedTextX.f, SurvivedTextY.f
+  SurvivedTextX = (ScreenWidth() - (SurvivedTextNumChars * 16)) / 2
+  SurvivedTextY = ScoreTextY + GameOverCharHeight + 10
+  DrawBitmapText(SurvivedTextX, SurvivedTextY, SurvivedText)
+  
   Protected KeyText.s = "Left Control to go back"
   Protected KeyTextNumChars.u = Len(KeyText)
   Protected KeyTextX.f, KeyTextY.f
   KeyTextX = (ScreenWidth() - (KeyTextNumChars * 16)) / 2
-  KeyTextY = ScoreTextY + 24 + 10
+  KeyTextY = SurvivedTextY + 24 + 10
   DrawBitmapText(KeyTextX, KeyTextY, KeyText)
 EndProcedure
 
@@ -953,7 +998,7 @@ Procedure DrawMultiplayerGameOver()
   Protected WinnerCharWidth.a = 32
   Protected WinnerCharHeight.a = 48
   
-  Protected WinnerText.s = "WINNER"
+  Protected WinnerText.s = "RANKING"
   Protected WinnerTextNumChars.u = Len(WinnerText)
   Protected WinnerTextX.f, WinnerTextY.f
   WinnerTextX = (ScreenWidth() - (WinnerTextNumChars * WinnerCharWidth)) / 2
@@ -961,21 +1006,32 @@ Procedure DrawMultiplayerGameOver()
   DrawBitmapText(WinnerTextX, WinnerTextY, WinnerText, WinnerCharWidth, WinnerCharHeight)
   
   
-  Protected PlayerCharWidth.a = 24
-  Protected PlayerCharHeight.a = 36
+  Protected PlayerCharWidth.a = 16
+  Protected PlayerCharHeight.a = 24
+  Protected i.a = 1
+  ForEach GameState\PlayfieldsRanking\RankPositions()
+    Protected PlayerID.s = "Player " + Str(GameState\PlayfieldsRanking\RankPositions()\PlayerID)
+    Protected Score.s = "Score:" + GameState\PlayfieldsRanking\RankPositions()\Score
+    Protected Survived.s = "Survived:" + StrF(GameState\PlayfieldsRanking\RankPositions()\TimeSurvived, 2)
+    
+    Protected RankText.s = PlayerID + "|" + Score + "|" + Survived
+    Protected RankTextNumChars.u = Len(RankText)
+    Protected RankTextX.f, RankTextY.f
+    RankTextX = (ScreenWidth() - (RankTextNumChars * PlayerCharWidth)) / 2
+    RankTextY = (WinnerTextY + WinnerCharHeight + 10) + ((i - 1) * (PlayerCharHeight + 10))
+    DrawBitmapText(RankTextX, RankTextY, RankText, PlayerCharWidth, PlayerCharHeight)
+    
+    i + 1
+  Next
   
-  Protected PlayerWinnerText.s = "Player " + Str(GameState\MultiplayerWinnerPlayerID)
-  Protected PlayerWinnerTextNumChars.u = Len(PlayerWinnerText)
-  Protected PlayerWinnerTextX.f, PlayerWinnerTextY.f
-  PlayerWinnerTextX = (ScreenWidth() - (PlayerWinnerTextNumChars * PlayerCharWidth)) / 2
-  PlayerWinnerTextY = WinnerTextY + WinnerCharHeight + 10
-  DrawBitmapText(PlayerWinnerTextX, PlayerWinnerTextY, PlayerWinnerText, PlayerCharWidth, PlayerCharHeight)
+  
+  
   
   Protected KeyText.s = "Left Control to go back"
   Protected KeyTextNumChars.u = Len(KeyText)
   Protected KeyTextX.f, KeyTextY.f
   KeyTextX = (ScreenWidth() - (KeyTextNumChars * 16)) / 2
-  KeyTextY = PlayerWinnerTextY + PlayerCharHeight + 10
+  KeyTextY = RankTextY + PlayerCharHeight + 10
   DrawBitmapText(KeyTextX, KeyTextY, KeyText)
   
 EndProcedure
@@ -1069,10 +1125,6 @@ Procedure SaveFallingPieceOnPlayField(*PlayField.TPlayField)
   EndIf
 EndProcedure
 
-Procedure LaunchRandomFallingPiece()
-  ;LaunchFallingPiece(Random(#Right4, #Line))
-EndProcedure
-
 Procedure.i IsActionKeyActivated(ActionKey.a)
   Select ActionKey
     Case #LeftControl
@@ -1145,7 +1197,7 @@ Procedure UpdateFallingPiece(*PlayField.TPlayField, Elapsed.f)
   If *FallingPiece\IsFalling
     
     *FallingPiece\FallingTimer + Elapsed
-    If *FallingPiece\FallingTimer >= #Fall_Time
+    If *FallingPiece\FallingTimer >= PlayfieldsDifficulty\FallTime
       ;fall down one line
       *FallingPiece\PosY + 1
       *FallingPiece\FallingTimer = 0.0
@@ -1162,7 +1214,7 @@ Procedure UpdateFallingPieceWheel(*PlayField.TPlayField, Elapsed.f)
   Protected *FallingPieceWheel.TFallingPieceWheel = @*PlayField\FallingPieceWheel
   
   *FallingPieceWheel\CurrentTimer + Elapsed
-  If *FallingPieceWheel\CurrentTimer > #Falling_Piece_Wheel_Timer And (Not *FallingPieceWheel\ChoosedPiece)
+  If *FallingPieceWheel\CurrentTimer >= PlayfieldsDifficulty\FallingPieceWheelTimer And (Not *FallingPieceWheel\ChoosedPiece)
     ;just cycle through the pieces
     *FallingPieceWheel\CurrentTimer  = 0
     *FallingPieceWheel\PieceType = (*FallingPieceWheel\PieceType + 1) % #Num_Piece_Types
@@ -1208,7 +1260,7 @@ Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
     *FallingPiecePosition\CurrentTimer + Elapsed
   EndIf
   
-  If *FallingPiecePosition\CurrentTimer > #Falling_Piece_Position_Timer
+  If *FallingPiecePosition\CurrentTimer >= PlayfieldsDifficulty\FallingPiecePositionTimer
     *FallingPiecePosition\Column = (*FallingPiecePosition\Column + 1) % #PlayFieldSize_Width
     *FallingPiecePosition\CurrentTimer = 0
   EndIf
@@ -1266,10 +1318,18 @@ Procedure.a FillPlayfieldLine(*Playfield.TPlayField, Line.a)
   EndIf
   
   Protected CurrentColumn.a
+  Protected EmptyColumn.a = Random(#PlayFieldSize_Width - 1)
   For CurrentColumn = 0 To #PlayFieldSize_Width - 1
-    Protected Color.u = RandomColor()
-    If CurrentColumn & 1
-      ;if it is odd, we fill and put a color
+    If CurrentColumn = EmptyColumn
+      ;a random column will be always empty
+      *Playfield\PlayField(CurrentColumn, Line) = #Empty
+      Continue
+    EndIf
+    
+    ;all other columns have a 50% chance of being empty
+    If Random(1)
+      Protected Color.u = RandomColor()
+      ;we fill and put a color
       *Playfield\PlayField(CurrentColumn, Line) = #Filled | Color
     Else
       ;if it is even, it will be empty
@@ -1348,24 +1408,38 @@ Procedure ChangeGameState(*GameState.TGameState, NewGameState.a)
       
     Case #Paused
       PauseSoundEffect(#MainMusic)
+      PauseSoundEffect(#TimeUpSound)
       PlaySoundEffect(#PauseSound)
       
     Case #SinglePlayerGameOver
       StopSoundEffect(#MainMusic)
+      StopSoundEffect(#TimeUpSound)
       PlaySoundEffect(#GameOverSound)
       *GameState\MinTimeGameOver = 2.0
       
     Case #MultiplayerGameOver
       StopSoundEffect(#MainMusic)
+      StopSoundEffect(#TimeUpSound)
       PlaySoundEffect(#WinnerSound)
       *GameState\MinTimeGameOver = 3.0
       
   EndSelect
 EndProcedure
 
+Procedure InitPlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty)
+  *PlayfieldsDifficulty\FallingPiecePositionTimer = #Initial_Falling_Piece_Position_Timer
+  *PlayfieldsDifficulty\FallingPieceWheelTimer = #Initial_Falling_Piece_Position_Timer
+  *PlayfieldsDifficulty\FallTime = #Initial_Fall_Time
+  *PlayfieldsDifficulty\TimeUntilNextDifficulty = #Time_Until_Next_Difficulty
+  *PlayfieldsDifficulty\PlayingTimeUp = #False
+  *PlayfieldsDifficulty\CurrentDifficulty = 0;first difficulty
+  *PlayfieldsDifficulty\MaxDifficulty = #Max_Difficulty
+EndProcedure
+
 Procedure StartNewGame(NumberOfPlayers.a)
   NumPlayers = NumberOfPlayers
   InitPlayFields(NumPlayers, PlayFields())
+  InitPlayfieldsDifficulty(@PlayfieldsDifficulty)
   CreateFallingPieceWheelSprites()
   CreateFallingPiecePositionSprite()
   CreatePiecesSprites()
@@ -1417,6 +1491,28 @@ Procedure UpdateStartMenu(Elapsed.f)
   
 EndProcedure
 
+Procedure GetPlayfieldsRanking(*PlayfieldsRanking.TPlayfieldsRanking)
+  Protected i.a
+  
+  ClearList(*PlayfieldsRanking\RankPositions())
+  
+  
+  For i = 1 To NumPlayers
+    AddElement(*PlayfieldsRanking\RankPositions())
+    *PlayfieldsRanking\RankPositions()\PlayerID = PlayFields(i - 1)\PlayerID
+    *PlayfieldsRanking\RankPositions()\Score = PlayFields(i - 1)\Score
+    *PlayfieldsRanking\RankPositions()\TimeSurvived = PlayFields(i - 1)\TimeSurvived
+  Next
+  
+  ;first we sort by time survived
+  SortStructuredList(*PlayfieldsRanking\RankPositions(), #PB_Sort_Descending, OffsetOf(TPlayfieldRankPosition\TimeSurvived), TypeOf(TPlayfieldRankPosition\TimeSurvived))
+  ;and then by score making the score the main attribute to win
+  SortStructuredList(*PlayfieldsRanking\RankPositions(), #PB_Sort_Descending, OffsetOf(TPlayfieldRankPosition\Score), TypeOf(TPlayfieldRankPosition\Score))
+  
+  
+  
+EndProcedure
+
 Procedure UpdateGameOverPlayFields(Elapsed.f)
   If NumPlayers = 1
     If PlayFields(0)\State = #GameOver
@@ -1426,18 +1522,15 @@ Procedure UpdateGameOverPlayFields(Elapsed.f)
   EndIf
   
   Protected i.a
-  Protected AlivePlayers.a = 0, WinnerPlayerID.a
+  Protected AlivePlayers.a = 0
   For i = 1 To NumPlayers
     If PlayFields(i - 1)\State <> #GameOver
       AlivePlayers + 1
-      ;save the playerid, when there is only one this will be correct
-      WinnerPlayerID = PlayFields(i - 1)\PlayerID
     EndIf
   Next
   
-  If AlivePlayers = 1
-    ;we have a winner
-    GameState\MultiplayerWinnerPlayerID = WinnerPlayerID
+  If AlivePlayers = 0
+    GetPlayfieldsRanking(@GameState\PlayfieldsRanking)
     ChangeGameState(@GameState, #MultiplayerGameOver)
   EndIf
   
@@ -1470,6 +1563,53 @@ Procedure UpdateMultiplayerGameOver(Elapsed.f)
   EndIf
 EndProcedure
 
+Procedure IncreasePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty)
+  *PlayfieldsDifficulty\CurrentDifficulty + 1
+  If *PlayfieldsDifficulty\CurrentDifficulty > *PlayfieldsDifficulty\MaxDifficulty
+    ;won't increase past maxdifficulty
+    ProcedureReturn
+  EndIf
+  Select *PlayfieldsDifficulty\CurrentDifficulty
+    Case 1 To 4:
+      ;starts at #Initial_Falling_Piece_Position_Timer and #Intial_Falling_Piece_Wheel_Timer
+      *PlayfieldsDifficulty\FallingPiecePositionTimer - 0.15;less 150 ms
+      *PlayfieldsDifficulty\FallingPieceWheelTimer - 0.15;less 150 ms
+      *PlayfieldsDifficulty\FallTime - 0.015;less 15 ms
+    Default
+      
+  EndSelect
+EndProcedure
+
+Procedure UpdatePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty, Elapsed.f)
+  *PlayfieldsDifficulty\TimeUntilNextDifficulty - Elapsed
+  If *PlayfieldsDifficulty\TimeUntilNextDifficulty <= 0
+    *PlayfieldsDifficulty\TimeUntilNextDifficulty = #Time_Until_Next_Difficulty
+    IncreasePlayfieldsDifficulty(*PlayfieldsDifficulty)
+    
+    *PlayfieldsDifficulty\PlayingTimeUp = #False
+    StopSoundEffect(#TimeUpSound)
+    
+    Debug "difficulty:" + Str(*PlayfieldsDifficulty\CurrentDifficulty)
+    Debug "FallingPiecePositionTimer:" + StrF(*PlayfieldsDifficulty\FallingPiecePositionTimer)
+    Debug "FallingPieceWheelTimer:" + StrF(*PlayfieldsDifficulty\FallingPieceWheelTimer)
+    
+  EndIf
+  
+  If Not *PlayfieldsDifficulty\PlayingTimeUp And *PlayfieldsDifficulty\TimeUntilNextDifficulty <= #Time_Up_Warning_Timer
+    ;CallDebugger
+    *PlayfieldsDifficulty\PlayingTimeUp = #True
+    PlaySoundEffect(#TimeUpSound, #True)
+  EndIf
+  
+EndProcedure
+
+Procedure UpdateTimeSurvived(*Playfield.TPlayField, Elapsed.f)
+  If *Playfield\State <> #GameOver
+    *Playfield\TimeSurvived + Elapsed
+  EndIf
+EndProcedure
+
+
 Procedure Update(Elapsed.f)
   If #PB_Compiler_Debugger
     If KeyboardReleased(#PB_Key_G)
@@ -1478,16 +1618,25 @@ Procedure Update(Elapsed.f)
     EndIf
     
     If KeyboardReleased(#PB_Key_H)
-      ;randomly sets one of the playfields as the winner (setting others to gameover state)
+      ;randomly sets one of the playfields as the last survivor
       Protected RandomWinner.a = Random(NumPlayers, 1), PlayerID.a
       For PlayerID = 1 To NumPlayers
         If PlayFields(PlayerID - 1)\PlayerID = RandomWinner
-          ;this will be the winner
+          ;this will be the last survivor
           Continue
         EndIf
         PlayFields(PlayerID - 1)\State = #GameOver
       Next
     EndIf
+    
+    If KeyboardReleased(#PB_Key_J)
+      ;sets all playfields to game over
+      For PlayerID = 1 To NumPlayers
+        PlayFields(PlayerID - 1)\State = #GameOver
+      Next
+    EndIf
+    
+    
   EndIf
   
   If GameState\CurrentGameState = #Playing
@@ -1503,8 +1652,10 @@ Procedure Update(Elapsed.f)
       UpdateFallingPieceWheel(@PlayFields(i - 1), Elapsed)
       UpdateFallingPiecePosition(@PlayFields(i - 1), Elapsed)
       UpdateScoringCompletedLines(@PlayFields(i - 1), Elapsed)
+      UpdateTimeSurvived(@PlayFields(i - 1), Elapsed)
     Next i
     UpdateGameOverPlayFields(Elapsed)
+    UpdatePlayfieldsDifficulty(@PlayfieldsDifficulty, Elapsed)
   ElseIf GameState\CurrentGameState = #StartMenu
     UpdateStartMenu(Elapsed)
   ElseIf GameState\CurrentGameState = #Paused

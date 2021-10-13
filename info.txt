@@ -6,3 +6,10 @@ https://opengameart.org/content/twister-tetris
 Sound effects:
 https://opengameart.org/content/game-over-bad-chest-sfx
 https://opengameart.org/content/game-over-soundold-school
+https://freesound.org/people/m_cel/sounds/507906/
+
+
+TODOS:
+-the winner must be the player with the highest score
+-the difficult should progress slowly
+-the attack could be instead making the current position or piece being chosen for the attacked player
