@@ -407,26 +407,6 @@ Procedure.i GetPlayfieldActionKey(PlayerID.a)
   ProcedureReturn #False
 EndProcedure
 
-Procedure.a SetupFallingPiece(*FallingPiece.TFallingPiece)
-  If IsSprite(*FallingPiece\FallenPieceBackgroundSprite)
-    FreeSprite(*FallingPiece\FallenPieceBackgroundSprite)
-  EndIf
-  
-  *FallingPiece\FallenPieceBackgroundSprite = CreateSprite(#PB_Any, #Piece_Size * Piece_Width, #PlayFieldSize_Height * Piece_Height,
-                                                           #PB_Sprite_AlphaBlending)
-  
-  If *FallingPiece\FallenPieceBackgroundSprite <> 0
-    StartDrawing(SpriteOutput(*FallingPiece\FallenPieceBackgroundSprite))
-    DrawingMode(#PB_2DDrawing_AllChannels)
-    Box(0, 0, #Piece_Size * Piece_Width, #PlayFieldSize_Height * Piece_Height, RGBA($cc, $ff, $ff, 100))
-    StopDrawing()
-    ProcedureReturn #True
-  EndIf
-  
-  ProcedureReturn #False
-  
-EndProcedure
-
 Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f, PlayerID.a)
   *PlayField\x = PosX
   *PlayField\y = PosY
@@ -444,7 +424,6 @@ Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f, PlayerID.a)
   *PlayField\PlayerID = PlayerID
   *PlayField\ActionKey = GetPlayfieldActionKey(PlayerID)
   *PlayField\TimeSurvived = 0.0
-  SetupFallingPiece(@*PlayField\FallingPiece)
   ChangePlayFieldState(*PlayField, #ChoosingFallingPiecePosition)
   
 EndProcedure
@@ -788,19 +767,6 @@ EndProcedure
 
 Procedure DrawFallingPiece(*PlayField.TPlayField)
   Protected FallingPiece.TFallingPiece = *PlayField\FallingPiece
-  
-  If FallingPiece\FallenPieceTimer > 0
-    Protected FallenPieceX.f = *PlayField\x + FallingPiece\PosX * Piece_Width
-    Protected FallenPieceY.f = *PlayField\y + FallingPiece\PosY * Piece_Height
-    
-    Protected FallenPieceBackgroundX.f = (FallenPieceX + (#Piece_Size * Piece_Width / 2)) - SpriteWidth(FallingPiece\FallenPieceBackgroundSprite) / 2
-    Protected FallenPieceBackgroundY.f = *PlayField\y
-    Protected Timer.l = (FallingPiece\FallenPieceTimer * 1000) / 50
-    Protected Intensity.a = 255 * (Timer % 2)
-    DisplayTransparentSprite(FallingPiece\FallenPieceBackgroundSprite, FallenPieceBackgroundX, FallenPieceBackgroundY, Intensity)
-    
-  EndIf
-  
   
   If Not FallingPiece\IsFalling
     ProcedureReturn
@@ -1194,7 +1160,7 @@ Procedure UpdateFallingPiece(*PlayField.TPlayField, Elapsed.f)
           *FallingPiece\PosY - 1;put the fallingpiece one line above
           *FallingPiece\IsFalling = #False
           SaveFallingPieceOnPlayField(*PlayField)
-          *FallingPiece\FallenPieceTimer = 0.5
+          *FallingPiece\FallenPieceTimer = 0.25
           Break
         EndIf
         
@@ -1209,7 +1175,7 @@ Procedure UpdateFallingPiece(*PlayField.TPlayField, Elapsed.f)
           *FallingPiece\PosY - 1;put the fallingpiece one line above
           *FallingPiece\IsFalling = #False
           SaveFallingPieceOnPlayField(*PlayField)
-          *FallingPiece\FallenPieceTimer = 0.5
+          *FallingPiece\FallenPieceTimer = 0.25
           Break
         EndIf
         
