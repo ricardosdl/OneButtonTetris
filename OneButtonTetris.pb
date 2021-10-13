@@ -1107,7 +1107,6 @@ Procedure SaveFallingPieceOnPlayField(*PlayField.TPlayField)
         
         If IsCellXWithinPlayfield And IsCellYAbovePlayfield
           ;game over
-          Debug "game over"
           *PlayField\State = #GameOver
           ProcedureReturn
         EndIf
@@ -1407,7 +1406,6 @@ Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
     ;finished all columns on the current line
     BringPlayFieldOneLineDown(*PLayField, CurrentLine - 1)
     If Not CheckCompletedLines(*PLayField)
-      Debug "sequential completed lines:" + Str(*PLayField\CompletedLines\SequentialCompletedLines)
       *PLayField\Score + *PLayField\CompletedLines\SequentialCompletedLines * #Completed_Line_Score
       If *PLayField\CompletedLines\SequentialCompletedLines > 1
         ;bonus score
