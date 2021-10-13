@@ -75,6 +75,7 @@ Enumeration TSounds
   #GameOverSound
   #WinnerSound
   #TimeUpSound
+  #IdleSound
 EndEnumeration
 
 Structure TPieceTemplate
@@ -242,6 +243,7 @@ Procedure LoadSounds()
   LoadSound(#GameOverSound, "assets\sfx\gameover.ogg")
   LoadSound(#WinnerSound, "assets\sfx\winner.ogg")
   LoadSound(#TimeUpSound, "assets\sfx\timeup.ogg")
+  LoadSound(#IdleSound, "assets\sfx\idle.ogg")
   
 EndProcedure
 
@@ -869,7 +871,7 @@ Procedure DrawTimeUp(*Playfield.TPlayfield, *PlayfieldsDifficulty.TPlayfieldsDif
 EndProcedure
 
 Procedure DrawIdleWarning(*PlayField.TPlayfield)
-  If *PlayField\IdleTimer >= (#Time_Until_Next_Difficulty / 2)
+  If *PlayField\IdleTimer >= (#Time_Until_Next_Difficulty / 3)
     Protected IdleText.s = "IDLE!"
     Protected IdleTextNumChars.u = Len(IdleText)
     Protected IdleTextX.f, IdleTextY.u
@@ -1428,17 +1430,20 @@ Procedure ChangeGameState(*GameState.TGameState, NewGameState.a)
     Case #Paused
       PauseSoundEffect(#MainMusic)
       PauseSoundEffect(#TimeUpSound)
+      PauseSoundEffect(#IdleSound)
       PlaySoundEffect(#PauseSound)
       
     Case #SinglePlayerGameOver
       StopSoundEffect(#MainMusic)
       StopSoundEffect(#TimeUpSound)
+      StopSoundEffect(#IdleSound)
       PlaySoundEffect(#GameOverSound)
       *GameState\MinTimeGameOver = 2.0
       
     Case #MultiplayerGameOver
       StopSoundEffect(#MainMusic)
       StopSoundEffect(#TimeUpSound)
+      StopSoundEffect(#IdleSound)
       PlaySoundEffect(#WinnerSound)
       *GameState\MinTimeGameOver = 3.0
       
@@ -1643,7 +1648,7 @@ Procedure UpdateIdleTimer(*Playfield.TPlayField, Elapsed.f)
   
   
   
-  If *Playfield\IdleTimer >= (#Time_Until_Next_Difficulty / 2 + 3)
+  If *Playfield\IdleTimer >= (#Time_Until_Next_Difficulty / 3 + 3)
     Select *Playfield\State
       Case #ChoosingFallingPiece
         ChooseCurrentPiece(*Playfield)
@@ -1655,6 +1660,16 @@ Procedure UpdateIdleTimer(*Playfield.TPlayField, Elapsed.f)
     
   EndIf
   
+  If *Playfield\IdleTimer >= (#Time_Until_Next_Difficulty / 3)
+    Protected HasExecuted.Ascii\a = #False
+    Protected Status = SoundEffectStatus(#IdleSound, @HasExecuted)
+    If HasExecuted\a
+      If Status <> #PB_Sound_Playing
+        ;
+        PlaySoundEffect(#IdleSound)
+      EndIf      
+    EndIf
+  EndIf
   
   
 EndProcedure
