@@ -10,8 +10,9 @@
 #Intial_Falling_Piece_Wheel_Timer = 0.75;seconds
 ;#Falling_Piece_Position_Timer = 0.2
 #Initial_Falling_Piece_Position_Timer = 0.75;seconds
-#Max_Difficulty = 4
-#Time_Until_Next_Difficulty = 40            ;seconds
+#Max_Difficulty = 7
+#Time_Until_Next_Difficulty = 40.0            ;seconds
+#Initial_Idle_Timer = #Time_Until_Next_Difficulty / 3
 #Time_Up_Warning_Timer = 4;seconds
 #Completed_Line_Score = 100
 #Max_PlayFields = 4
@@ -75,6 +76,7 @@ Enumeration TSounds
   #GameOverSound
   #WinnerSound
   #TimeUpSound
+  #IdleSound
 EndEnumeration
 
 Structure TPieceTemplate
@@ -133,6 +135,7 @@ Structure TPlayfieldsDifficulty
   PlayingTimeUp.a
   CurrentDifficulty.a
   MaxDifficulty.a
+  CurrentIdleTimer.f
 EndStructure
 
 Structure TPlayfieldRankPosition
@@ -169,6 +172,7 @@ Structure TPlayField
   PlayerID.a
   ActionKey.a
   TimeSurvived.f;in seconds
+  IdleTimer.f;in seconds
 EndStructure
 
 Structure TStartMenu
@@ -258,6 +262,7 @@ Procedure LoadSounds()
   LoadSound(#GameOverSound, "assets\sfx\gameover.ogg")
   LoadSound(#WinnerSound, "assets\sfx\winner.ogg")
   LoadSound(#TimeUpSound, "assets\sfx\timeup.ogg")
+  LoadSound(#IdleSound, "assets\sfx\idle.ogg")
   
 EndProcedure
 
@@ -441,6 +446,7 @@ Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f, PlayerID.a)
   *PlayField\PlayerID = PlayerID
   *PlayField\ActionKey = GetPlayfieldActionKey(PlayerID)
   *PlayField\TimeSurvived = 0.0
+  *PlayField\IdleTimer = 0.0
   ChangePlayFieldState(*PlayField, #ChoosingFallingPiecePosition)
   
 EndProcedure
@@ -870,6 +876,10 @@ Procedure DrawPlayFieldHUD(*PlayField.TPlayField)
 EndProcedure
 
 Procedure DrawTimeUp(*Playfield.TPlayfield, *PlayfieldsDifficulty.TPlayfieldsDifficulty)
+  If *Playfield\State = #GameOver
+    ProcedureReturn
+  EndIf
+  
   If *PlayfieldsDifficulty\TimeUntilNextDifficulty <= #Time_Up_Warning_Timer
     Protected TimeUpText.s = "FASTER!"
     Protected TimeTextNumChars.u = Len(TimeUpText)
@@ -881,6 +891,20 @@ Procedure DrawTimeUp(*Playfield.TPlayfield, *PlayfieldsDifficulty.TPlayfieldsDif
     DrawBitmapText(TimeUpX, TimeUpY, TimeUpText, 16, 24, Transparency)
   EndIf
   
+EndProcedure
+
+Procedure DrawIdleWarning(*PlayField.TPlayfield)
+  If *PlayField\IdleTimer >= PlayfieldsDifficulty\CurrentIdleTimer
+    Protected IdleText.s = "IDLE!"
+    Protected IdleTextNumChars.u = Len(IdleText)
+    Protected IdleTextX.f, IdleTextY.u
+    IdleTextX = *PlayField\x + (*PlayField\Width - IdleTextNumChars * 16) / 2
+    IdleTextY = *PlayField\y + 10
+    Protected Timer.u = (*PlayField\IdleTimer * 1000) / 200
+    Protected Transparency.a = 255 * (Timer % 2)
+    DrawBitmapText(IdleTextX, IdleTextY, IdleText, 16, 24, Transparency)
+    
+  EndIf
 EndProcedure
 
 Procedure DrawPlayfield(*PLayField.TPlayField)
@@ -900,6 +924,8 @@ Procedure DrawPlayfield(*PLayField.TPlayField)
   Next x
   
   DrawTimeUp(*PLayField, @PlayfieldsDifficulty)
+  
+  DrawIdleWarning(*PLayField)
   
   DrawFallingPiece(*PLayField)
   
@@ -1100,7 +1126,6 @@ Procedure SaveFallingPieceOnPlayField(*PlayField.TPlayField)
         
         If IsCellXWithinPlayfield And IsCellYAbovePlayfield
           ;game over
-          Debug "game over"
           *PlayField\State = #GameOver
           ProcedureReturn
         EndIf
@@ -1206,6 +1231,16 @@ Procedure UpdateFallingPiece(*PlayField.TPlayField, Elapsed.f)
   
 EndProcedure
 
+Procedure ChooseCurrentPiece(*Playfield.TPlayField)
+  If *Playfield\State <> #ChoosingFallingPiece
+    ProcedureReturn
+  EndIf
+  
+  *Playfield\FallingPieceWheel\ChoosedPiece = #True
+  *Playfield\FallingPieceWheel\ChoosedPieceTimer = 0.5
+  
+EndProcedure
+
 Procedure UpdateFallingPieceWheel(*PlayField.TPlayField, Elapsed.f)
   If *PlayField\State <> #ChoosingFallingPiece
     ProcedureReturn
@@ -1222,8 +1257,7 @@ Procedure UpdateFallingPieceWheel(*PlayField.TPlayField, Elapsed.f)
   
   If IsActionKeyActivated(*PlayField\ActionKey) And (Not *FallingPieceWheel\ChoosedPiece)
     ;the player chose the current piece
-    *FallingPieceWheel\ChoosedPiece = #True
-    *FallingPieceWheel\ChoosedPieceTimer = 0.5
+    ChooseCurrentPiece(*PlayField)
   EndIf
   
   If *FallingPieceWheel\ChoosedPiece And *FallingPieceWheel\ChoosedPieceTimer >=0
@@ -1244,6 +1278,16 @@ Procedure CheckKeys()
   PKeyReleased = KeyboardReleased(#PB_Key_P)
 EndProcedure
 
+Procedure ChooseCurrentPosition(*PlayField.TPlayField)
+  If *PlayField\State <> #ChoosingFallingPiecePosition
+    ProcedureReturn
+  EndIf
+  
+  *PlayField\FallingPiecePosition\ChoosedPosition = #True
+  *PlayField\FallingPiecePosition\ChoosedPositionTimer = 0.5
+  
+EndProcedure
+
 Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
   If *PlayField\State <> #ChoosingFallingPiecePosition
     ProcedureReturn
@@ -1252,8 +1296,7 @@ Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
   Protected *FallingPiecePosition.TFallingPiecePosition = @*PlayField\FallingPiecePosition
   
   If IsActionKeyActivated(*PlayField\ActionKey) And Not *FallingPiecePosition\ChoosedPosition
-    *FallingPiecePosition\ChoosedPosition = #True
-    *FallingPiecePosition\ChoosedPositionTimer = 0.5
+    ChooseCurrentPosition(*PlayField)
   EndIf
   
   If Not *FallingPiecePosition\ChoosedPosition
@@ -1286,6 +1329,9 @@ Procedure BringPlayFieldOneLineDown(*PlayField.TPLayField, StartLine.b)
 EndProcedure
 
 Procedure BringPlayFieldOneLineUp(*Playfield.TPlayfield, StartLine.b)
+  If *Playfield\State = #GameOver
+    ProcedureReturn
+  EndIf
   Protected CurrentLine.b, CurrentColumn.a
   For CurrentLine = 1 To #PlayFieldSize_Height - 1
     For CurrentColumn = 0 To #PlayFieldSize_Width - 1
@@ -1313,6 +1359,9 @@ Procedure.u RandomColor()
 EndProcedure
 
 Procedure.a FillPlayfieldLine(*Playfield.TPlayField, Line.a)
+  If *Playfield\State = #GameOver
+    ProcedureReturn
+  EndIf
   If Not IsCellWithinPlayField(0, Line)
     ProcedureReturn #False
   EndIf
@@ -1376,7 +1425,6 @@ Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
     ;finished all columns on the current line
     BringPlayFieldOneLineDown(*PLayField, CurrentLine - 1)
     If Not CheckCompletedLines(*PLayField)
-      Debug "sequential completed lines:" + Str(*PLayField\CompletedLines\SequentialCompletedLines)
       *PLayField\Score + *PLayField\CompletedLines\SequentialCompletedLines * #Completed_Line_Score
       If *PLayField\CompletedLines\SequentialCompletedLines > 1
         ;bonus score
@@ -1409,17 +1457,20 @@ Procedure ChangeGameState(*GameState.TGameState, NewGameState.a)
     Case #Paused
       PauseSoundEffect(#MainMusic)
       PauseSoundEffect(#TimeUpSound)
+      PauseSoundEffect(#IdleSound)
       PlaySoundEffect(#PauseSound)
       
     Case #SinglePlayerGameOver
       StopSoundEffect(#MainMusic)
       StopSoundEffect(#TimeUpSound)
+      StopSoundEffect(#IdleSound)
       PlaySoundEffect(#GameOverSound)
       *GameState\MinTimeGameOver = 2.0
       
     Case #MultiplayerGameOver
       StopSoundEffect(#MainMusic)
       StopSoundEffect(#TimeUpSound)
+      StopSoundEffect(#IdleSound)
       PlaySoundEffect(#WinnerSound)
       *GameState\MinTimeGameOver = 3.0
       
@@ -1434,6 +1485,7 @@ Procedure InitPlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty)
   *PlayfieldsDifficulty\PlayingTimeUp = #False
   *PlayfieldsDifficulty\CurrentDifficulty = 0;first difficulty
   *PlayfieldsDifficulty\MaxDifficulty = #Max_Difficulty
+  *PlayfieldsDifficulty\CurrentIdleTimer = #Initial_Idle_Timer
 EndProcedure
 
 Procedure StartNewGame(NumberOfPlayers.a)
@@ -1574,7 +1626,13 @@ Procedure IncreasePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficul
       ;starts at #Initial_Falling_Piece_Position_Timer and #Intial_Falling_Piece_Wheel_Timer
       *PlayfieldsDifficulty\FallingPiecePositionTimer - 0.15;less 150 ms
       *PlayfieldsDifficulty\FallingPieceWheelTimer - 0.15;less 150 ms
-      *PlayfieldsDifficulty\FallTime - 0.015;less 15 ms
+      *PlayfieldsDifficulty\FallTime - 0.015             ;less 15 ms
+      *PlayfieldsDifficulty\CurrentIdleTimer - 2;less 2 seconds
+    Case 5:
+      *PlayfieldsDifficulty\FallTime - 0.015
+      *PlayfieldsDifficulty\CurrentIdleTimer - 2
+    Case 6 To 7:
+      *PlayfieldsDifficulty\FallTime - 0.015             ;less 15 ms
     Default
       
   EndSelect
@@ -1589,14 +1647,9 @@ Procedure UpdatePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty
     *PlayfieldsDifficulty\PlayingTimeUp = #False
     StopSoundEffect(#TimeUpSound)
     
-    Debug "difficulty:" + Str(*PlayfieldsDifficulty\CurrentDifficulty)
-    Debug "FallingPiecePositionTimer:" + StrF(*PlayfieldsDifficulty\FallingPiecePositionTimer)
-    Debug "FallingPieceWheelTimer:" + StrF(*PlayfieldsDifficulty\FallingPieceWheelTimer)
-    
   EndIf
   
   If Not *PlayfieldsDifficulty\PlayingTimeUp And *PlayfieldsDifficulty\TimeUntilNextDifficulty <= #Time_Up_Warning_Timer
-    ;CallDebugger
     *PlayfieldsDifficulty\PlayingTimeUp = #True
     PlaySoundEffect(#TimeUpSound, #True)
   EndIf
@@ -1609,6 +1662,46 @@ Procedure UpdateTimeSurvived(*Playfield.TPlayField, Elapsed.f)
   EndIf
 EndProcedure
 
+Procedure UpdateIdleTimer(*Playfield.TPlayField, Elapsed.f)
+  ;#ChoosingFallingPiece
+  ;#ChoosingFallingPiecePosition
+  Protected State.a = *Playfield\State
+  Protected ShouldUpdate.a = Bool((State = #ChoosingFallingPiece) Or (State = #ChoosingFallingPiecePosition))
+  If ShouldUpdate
+    *Playfield\IdleTimer + Elapsed
+  EndIf
+  
+  If IsActionKeyActivated(*PlayField\ActionKey)
+    *Playfield\IdleTimer = 0
+  EndIf
+  
+  
+  
+  If *Playfield\IdleTimer >= (PlayfieldsDifficulty\CurrentIdleTimer + 3)
+    Select *Playfield\State
+      Case #ChoosingFallingPiece
+        ChooseCurrentPiece(*Playfield)
+      Case #ChoosingFallingPiecePosition
+        ChooseCurrentPosition(*Playfield)
+    EndSelect
+    
+    *Playfield\IdleTimer = 0
+    
+  EndIf
+  
+  If *Playfield\IdleTimer >= PlayfieldsDifficulty\CurrentIdleTimer
+    Protected HasExecuted.Ascii\a = #False
+    Protected Status = SoundEffectStatus(#IdleSound, @HasExecuted)
+    If HasExecuted\a
+      If Status <> #PB_Sound_Playing
+        ;
+        PlaySoundEffect(#IdleSound)
+      EndIf      
+    EndIf
+  EndIf
+  
+  
+EndProcedure
 
 Procedure Update(Elapsed.f)
   If #PB_Compiler_Debugger
@@ -1653,6 +1746,7 @@ Procedure Update(Elapsed.f)
       UpdateFallingPiecePosition(@PlayFields(i - 1), Elapsed)
       UpdateScoringCompletedLines(@PlayFields(i - 1), Elapsed)
       UpdateTimeSurvived(@PlayFields(i - 1), Elapsed)
+      UpdateIdleTimer(@PlayFields(i - 1), Elapsed)
     Next i
     UpdateGameOverPlayFields(Elapsed)
     UpdatePlayfieldsDifficulty(@PlayfieldsDifficulty, Elapsed)
