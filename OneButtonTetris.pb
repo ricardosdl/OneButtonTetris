@@ -1619,7 +1619,6 @@ Procedure IncreasePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficul
     Default
       
   EndSelect
-  Debug "currentidletimer:" + StrF(*PlayfieldsDifficulty\CurrentIdleTimer)
 EndProcedure
 
 Procedure UpdatePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty, Elapsed.f)
@@ -1631,14 +1630,9 @@ Procedure UpdatePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty
     *PlayfieldsDifficulty\PlayingTimeUp = #False
     StopSoundEffect(#TimeUpSound)
     
-    Debug "difficulty:" + Str(*PlayfieldsDifficulty\CurrentDifficulty)
-    Debug "FallingPiecePositionTimer:" + StrF(*PlayfieldsDifficulty\FallingPiecePositionTimer)
-    Debug "FallingPieceWheelTimer:" + StrF(*PlayfieldsDifficulty\FallingPieceWheelTimer)
-    
   EndIf
   
   If Not *PlayfieldsDifficulty\PlayingTimeUp And *PlayfieldsDifficulty\TimeUntilNextDifficulty <= #Time_Up_Warning_Timer
-    ;CallDebugger
     *PlayfieldsDifficulty\PlayingTimeUp = #True
     PlaySoundEffect(#TimeUpSound, #True)
   EndIf
