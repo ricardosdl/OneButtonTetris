@@ -18,6 +18,8 @@
 #Max_PlayFields = 4
 #FallingPieceWheel_Pieces_Per_Column = 2
 #FallingPieceWheel_Pieces_Per_Line = 2
+#Max_Particles = 100
+#Num_Sparkles_Particles_Sprites = 3
 
 EnumerationBinary TPieceInfo
   #Empty
@@ -192,11 +194,23 @@ Structure TParticle
   Sprite.i;the sprite that will be displayed
   Transparency.a
   Active.a;#true of active #false if not
-  Time.f;if > 0 the particle is active or alive
+  Time.f  ;how much time this particle will be alive in seconds
+  CurrentTime.f;if > 0 the particle is active or alive
   Update.UpdateParticleProc
   Draw.UpdateParticleProc
 EndStructure
 
+Prototype UpdateEmitterProc(*Emitter, Elapsed.f)
+Structure TEmitter
+  x.f
+  y.f
+  AngleX.f;in degrees
+  AngleY.f;in degrees
+  Active.a
+  Time.f
+  CurrentTime.f
+  Update.UpdateEmitterProc
+EndStructure
 
 Global ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
@@ -213,7 +227,138 @@ Global Dim PiecesSprites(#Right4);the sprites used to draw the playfield and fal
 Global StartMenu.TStartMenu, Bitmap_Font_Sprite.i
 Global SoundInitiated.a = #False, VolumeMusic.a = 100, VolumeSoundEffects.a = 50
 Global ControlReleased, SpaceKeyReleased.i, BackspaceReleased.i, DownKeyReleased.i, PKeyReleased.i = #False
+Global Dim SparklesParticles.TParticle(#Max_Particles - 1), Dim SparklesParticlesSprites(#Num_Sparkles_Particles_Sprites - 1)
+Global NewList Emitters.TEmitter()
 
+
+Procedure.i GetEmitter(x.f, y.f, AngleX.f, AngleY.f, Time.f, UpdateProc.UpdateEmitterProc)
+  Protected *Emitter.TEmitter = #Null
+  ForEach Emitters()
+    If Not Emitters()\Active
+      *Emitter = @Emitters()
+    EndIf
+    
+  Next
+  If *Emitter = #Null
+    AddElement(Emitters())
+    *Emitter = @Emitters()
+  EndIf
+  
+  *Emitter\x = x
+  *Emitter\y = y
+  *Emitter\AngleX = AngleX
+  *Emitter\AngleY = AngleY
+  *Emitter\Active = #True
+  *Emitter\Time = Time
+  *Emitter\CurrentTime = Time
+  *Emitter\Update = UpdateProc
+  
+  ProcedureReturn *Emitter
+EndProcedure
+
+Procedure.i GetSparkleParticle()
+  Protected i.a
+  For i = 0 To #Max_Particles - 1
+    If Not SparklesParticles(i)\Active
+      ProcedureReturn @SparklesParticles(i)
+    EndIf
+  Next
+  
+  ProcedureReturn #Null
+  
+EndProcedure
+
+Procedure UpdateQuickSparkleParticle(*Particle.TParticle, Elapsed.f)
+  If Not *Particle\Active
+    ProcedureReturn
+  EndIf
+  *Particle\x + *Particle\Vx * Elapsed
+  *Particle\y + *Particle\vy * Elapsed
+  
+  
+  *Particle\Vy + 50 * Elapsed;gravity
+  
+  Protected TimeOverNumSprites.f = *Particle\Time / #Num_Sparkles_Particles_Sprites
+  Protected CurrentSpriteIdx.a = *Particle\CurrentTime / TimeOverNumSprites
+  If CurrentSpriteIdx > #Num_Sparkles_Particles_Sprites - 1
+    CurrentSpriteIdx = #Num_Sparkles_Particles_Sprites - 1
+  EndIf
+  
+  *Particle\Sprite = SparklesParticlesSprites(CurrentSpriteIdx)
+  
+  *Particle\Transparency = 255 * (*Particle\CurrentTime / *Particle\Time)
+  
+  Protected NumParticleSizes.a = 3
+  Dim ParticleSizes.a(NumParticleSizes - 1)
+  ParticleSizes(0) = 8
+  ParticleSizes(1) = 6
+  ParticleSizes(2) = 4
+  
+  Protected TimeIntervalPerSize.f = *Particle\Time / NumParticleSizes
+  Protected CurrentParticleSizeIdx.a = *Particle\CurrentTime / TimeIntervalPerSize
+  If CurrentParticleSizeIdx > NumParticleSizes - 1
+    CurrentParticleSizeIdx = NumParticleSizes - 1
+  EndIf
+  
+  *Particle\w = ParticleSizes(CurrentParticleSizeIdx)
+  *Particle\h = ParticleSizes(CurrentParticleSizeIdx)
+  
+  
+  *Particle\CurrentTime - Elapsed
+  If *Particle\CurrentTime <= 0
+    *Particle\Active = #False
+  EndIf
+  
+EndProcedure
+
+Procedure EmitterQuickSparklesUpdate(*Emitter.TEmitter, Elapsed.f)
+  Protected NumParticles.a = Random(15, 10), i.a = 0
+  Protected StartAngleY.f = *Emitter\AngleY - 45
+  Protected FinalAngleY.f = *Emitter\AngleY + 45
+  Protected StepAngleY.f = (FinalAngleY - StartAngleY) / NumParticles
+  For i = 1 To NumParticles
+    Protected *Particle.TParticle = GetSparkleParticle()
+    If *Particle = #Null
+      Continue
+    EndIf
+;     x.f;position x
+;     y.f;postion y
+;     w.f;width
+;     h.f;height
+;     Vx.f;velocity x
+;     Vy.f;velocity y
+;     Sprite.i;the sprite that will be displayed
+;     Transparency.a
+;     Active.a;#true of active #false if not
+;     Time.f  ;how much time this particle will be alive in seconds
+;     CurrentTime.f;if > 0 the particle is active or alive
+;     Update.UpdateParticleProc
+;     Draw.UpdateParticleProc
+    
+    
+    
+    *Particle\x = *Emitter\x
+    *Particle\y = *Emitter\y
+    *Particle\w = 4
+    *Particle\h = 4
+    *Particle\Vx = Random(100, 25) * Cos(Radian(*Emitter\AngleX))
+    *Particle\Vy = Random(100, 50) * Sin(Radian(StartAngleY))
+    StartAngleY + StepAngleY
+    *Particle\Sprite = SparklesParticlesSprites(0)
+    *Particle\Transparency = 255
+    *Particle\Active = #True
+    *Particle\Time = 500 / 1000;in ms
+    *Particle\CurrentTime = *Particle\Time
+    *Particle\Update = @UpdateQuickSparkleParticle()
+  Next
+  
+  *Emitter\CurrentTime - Elapsed
+  If *Emitter\CurrentTime <= 0
+    *Emitter\Active = #False
+  EndIf
+  
+  
+EndProcedure
 
 ;Reads a list of integers separated by Separator and put them on IntegerList()
 ;no check is performed for valid integers in StringList
@@ -596,7 +741,27 @@ Procedure.i GetPieceSpriteByColor(Color.u)
   
 EndProcedure
 
-
+Procedure CreateSparklesParticlesSprites()
+  Protected i.a
+  Protected Dim SpritesColors.q(#Num_Sparkles_Particles_Sprites - 1)
+  SpritesColors(2) = RGBA($CC, $FF, $FF, $FF);almost white
+  SpritesColors(1) = RGBA($FF, $FF, $66, $FF);light yellow
+  SpritesColors(0) = RGBA($FF, $FF, $00, $FF);heavy yellow
+  For i = 0 To #Num_Sparkles_Particles_Sprites - 1
+    If IsSprite(SparklesParticlesSprites(i))
+      FreeSprite(SparklesParticlesSprites(i))
+    EndIf
+    
+    SparklesParticlesSprites(i) = CreateSprite(#PB_Any, 1, 1, #PB_Sprite_AlphaBlending)
+    If SparklesParticlesSprites(i) <> 0
+      StartDrawing(SpriteOutput(SparklesParticlesSprites(i)))
+      Box(0, 0, 1, 1, SpritesColors(i))
+      StopDrawing()
+    EndIf
+    
+    
+  Next i
+EndProcedure
 
 Procedure CreateFallingPieceWheelSprites()
   Protected PieceType.a
@@ -1062,6 +1227,20 @@ Procedure DrawMultiplayerGameOver()
   
 EndProcedure
 
+Procedure DrawParticles()
+  Protected i.a
+  For i = 0 To #Max_Particles - 1
+    If Not SparklesParticles(i)\Active
+      Continue
+    EndIf
+    
+    ZoomSprite(SparklesParticles(i)\Sprite, SparklesParticles(i)\w, SparklesParticles(i)\h)
+    DisplayTransparentSprite(SparklesParticles(i)\Sprite, SparklesParticles(i)\x, SparklesParticles(i)\y, SparklesParticles(i)\Transparency)
+    
+  Next
+  
+EndProcedure
+
 Procedure Draw()
   If GameState\CurrentGameState = #Playing
     DrawPlayFields()
@@ -1079,6 +1258,9 @@ Procedure Draw()
     DrawPlayFields()
     DrawMultiplayerGameOver()
   EndIf
+  
+  DrawParticles()
+  
 EndProcedure
 
 
@@ -1258,6 +1440,13 @@ Procedure UpdateFallingPieceWheel(*PlayField.TPlayField, Elapsed.f)
   If IsActionKeyActivated(*PlayField\ActionKey) And (Not *FallingPieceWheel\ChoosedPiece)
     ;the player chose the current piece
     ChooseCurrentPiece(*PlayField)
+    ;TODO: emit some particles
+    ;GetEmitter(PosX, PosY, 45, 0, 1 / 1000, @EmitterQuickSparklesUpdate())
+    Protected Column.a = *FallingPieceWheel\PieceType % #FallingPieceWheel_Pieces_Per_Column
+    Protected Line.a = *FallingPieceWheel\PieceType / #FallingPieceWheel_Pieces_Per_Line
+    Protected PosX.f = *PlayField\x + *PlayField\Width + 10 + Column * (#Piece_Size * Piece_Width + 10)
+    Protected PosY.f = *PlayField\y + 30 + Line * (#Piece_Size * Piece_Height + 10)
+    GetEmitter(PosX, PosY, 0, 0, 500 / 1000, @EmitterQuickSparklesUpdate())
   EndIf
   
   If *FallingPieceWheel\ChoosedPiece And *FallingPieceWheel\ChoosedPieceTimer >=0
@@ -1297,6 +1486,10 @@ Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
   
   If IsActionKeyActivated(*PlayField\ActionKey) And Not *FallingPiecePosition\ChoosedPosition
     ChooseCurrentPosition(*PlayField)
+    ;TODO:emit some particles
+    Protected PosX.f = *PLayField\x + *FallingPiecePosition\Column * Piece_Width
+    Protected PosY.f = *PlayField\y
+    GetEmitter(PosX, PosY, 45, 0, 1 / 1000, @EmitterQuickSparklesUpdate())
   EndIf
   
   If Not *FallingPiecePosition\ChoosedPosition
@@ -1703,6 +1896,24 @@ Procedure UpdateIdleTimer(*Playfield.TPlayField, Elapsed.f)
   
 EndProcedure
 
+Procedure UpdateParticles(Elapsed.f)
+  ForEach Emitters()
+    If Emitters()\Active
+      Emitters()\Update(@Emitters(), Elapsed)
+    EndIf
+  Next
+  
+  Protected i.a
+  For i = 0 To #Max_Particles - 1
+    If SparklesParticles(i)\Active
+      SparklesParticles(i)\Update(@SparklesParticles(i), Elapsed)
+    EndIf
+  Next
+  
+  
+  
+EndProcedure
+
 Procedure Update(Elapsed.f)
   If #PB_Compiler_Debugger
     If KeyboardReleased(#PB_Key_G)
@@ -1762,6 +1973,8 @@ Procedure Update(Elapsed.f)
     CheckKeys()
     UpdateMultiplayerGameOver(Elapsed)
   EndIf
+  
+  UpdateParticles(Elapsed)
 
 EndProcedure
 
@@ -1778,6 +1991,7 @@ LoadBitmapFontSprite()
 SetupStartMenu()
 LoadPiecesTemplate()
 LoadPiecesConfigurations()
+CreateSparklesParticlesSprites()
 ChangeGameState(@GameState, #StartMenu)
 
 LastTimeInMs = ElapsedMilliseconds()
