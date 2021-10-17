@@ -80,6 +80,7 @@ Enumeration TSounds
   #TimeUpSound
   #IdleSound
   #SelectSound
+  #ScoreSound
 EndEnumeration
 
 Structure TPieceTemplate
@@ -410,6 +411,7 @@ Procedure LoadSounds()
   LoadSound(#TimeUpSound, "assets\sfx\timeup.ogg")
   LoadSound(#IdleSound, "assets\sfx\idle.ogg")
   LoadSound(#SelectSound, "assets\sfx\select.ogg")
+  LoadSound(#ScoreSound, "assets\sfx\score.ogg")
   
 EndProcedure
 
@@ -1618,6 +1620,7 @@ Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
   Else
     ;finished all columns on the current line
     BringPlayFieldOneLineDown(*PLayField, CurrentLine - 1)
+    PlaySoundEffect(#ScoreSound)
     If Not CheckCompletedLines(*PLayField)
       *PLayField\Score + *PLayField\CompletedLines\SequentialCompletedLines * #Completed_Line_Score
       If *PLayField\CompletedLines\SequentialCompletedLines > 1
