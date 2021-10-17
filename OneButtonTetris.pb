@@ -79,6 +79,7 @@ Enumeration TSounds
   #WinnerSound
   #TimeUpSound
   #IdleSound
+  #SelectSound
 EndEnumeration
 
 Structure TPieceTemplate
@@ -408,6 +409,7 @@ Procedure LoadSounds()
   LoadSound(#WinnerSound, "assets\sfx\winner.ogg")
   LoadSound(#TimeUpSound, "assets\sfx\timeup.ogg")
   LoadSound(#IdleSound, "assets\sfx\idle.ogg")
+  LoadSound(#SelectSound, "assets\sfx\select.ogg")
   
 EndProcedure
 
@@ -1440,13 +1442,12 @@ Procedure UpdateFallingPieceWheel(*PlayField.TPlayField, Elapsed.f)
   If IsActionKeyActivated(*PlayField\ActionKey) And (Not *FallingPieceWheel\ChoosedPiece)
     ;the player chose the current piece
     ChooseCurrentPiece(*PlayField)
-    ;TODO: emit some particles
-    ;GetEmitter(PosX, PosY, 45, 0, 1 / 1000, @EmitterQuickSparklesUpdate())
     Protected Column.a = *FallingPieceWheel\PieceType % #FallingPieceWheel_Pieces_Per_Column
     Protected Line.a = *FallingPieceWheel\PieceType / #FallingPieceWheel_Pieces_Per_Line
     Protected PosX.f = *PlayField\x + *PlayField\Width + 10 + Column * (#Piece_Size * Piece_Width + 10)
     Protected PosY.f = *PlayField\y + 30 + Line * (#Piece_Size * Piece_Height + 10)
     GetEmitter(PosX, PosY, 0, 0, 500 / 1000, @EmitterQuickSparklesUpdate())
+    PlaySoundEffect(#SelectSound)
   EndIf
   
   If *FallingPieceWheel\ChoosedPiece And *FallingPieceWheel\ChoosedPieceTimer >=0
@@ -1486,10 +1487,10 @@ Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
   
   If IsActionKeyActivated(*PlayField\ActionKey) And Not *FallingPiecePosition\ChoosedPosition
     ChooseCurrentPosition(*PlayField)
-    ;TODO:emit some particles
     Protected PosX.f = *PLayField\x + *FallingPiecePosition\Column * Piece_Width
     Protected PosY.f = *PlayField\y
     GetEmitter(PosX, PosY, 45, 0, 1 / 1000, @EmitterQuickSparklesUpdate())
+    PlaySoundEffect(#SelectSound)
   EndIf
   
   If Not *FallingPiecePosition\ChoosedPosition
