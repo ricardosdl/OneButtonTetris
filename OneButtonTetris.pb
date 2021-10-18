@@ -1589,6 +1589,81 @@ Procedure MultiplayerAttack(AttackerPlayfieldID.a, CompletedLines.a)
   Wend
 EndProcedure
 
+Procedure UpdateSparkleScore(*Particle.TParticle, Elapsed.f)
+  If Not *Particle\Active
+    ProcedureReturn
+  EndIf
+  *Particle\x + *Particle\Vx * Elapsed
+  *Particle\y + *Particle\vy * Elapsed
+  
+  
+  *Particle\Vy + 50 * Elapsed;gravity
+  
+  Protected TimeOverNumSprites.f = *Particle\Time / #Num_Sparkles_Particles_Sprites
+  Protected CurrentSpriteIdx.a = *Particle\CurrentTime / TimeOverNumSprites
+  If CurrentSpriteIdx > #Num_Sparkles_Particles_Sprites - 1
+    CurrentSpriteIdx = #Num_Sparkles_Particles_Sprites - 1
+  EndIf
+  
+  *Particle\Sprite = SparklesParticlesSprites(CurrentSpriteIdx)
+  
+  *Particle\Transparency = 100 + (255 - 100) * (*Particle\CurrentTime / *Particle\Time)
+  
+  Protected NumParticleSizes.a = 3
+  Dim ParticleSizes.a(NumParticleSizes - 1)
+  ParticleSizes(0) = 8
+  ParticleSizes(1) = 6
+  ParticleSizes(2) = 4
+  
+  Protected TimeIntervalPerSize.f = *Particle\Time / NumParticleSizes
+  Protected CurrentParticleSizeIdx.a = *Particle\CurrentTime / TimeIntervalPerSize
+  If CurrentParticleSizeIdx > NumParticleSizes - 1
+    CurrentParticleSizeIdx = NumParticleSizes - 1
+  EndIf
+  
+  *Particle\w = ParticleSizes(CurrentParticleSizeIdx)
+  *Particle\h = ParticleSizes(CurrentParticleSizeIdx)
+  
+  
+  *Particle\CurrentTime - Elapsed
+  If *Particle\CurrentTime <= 0
+    *Particle\Active = #False
+  EndIf
+EndProcedure
+
+Procedure EmitterUpdateScore(*Emitter.TEmitter, Elapsed.f)
+  Protected NumParticles.a = *Emitter\NumParticles, i.a = 0
+  Protected StartAngleY.f = -180 - 15
+  Protected FinalAngleY.f = 0 + 15
+  Protected StepAngleY.f = (FinalAngleY - StartAngleY) / NumParticles
+  For i = 1 To NumParticles
+    Protected *Particle.TParticle = GetSparkleParticle()
+    If *Particle = #Null
+      Continue
+    EndIf
+    
+    *Particle\x = *Emitter\x
+    *Particle\y = *Emitter\y
+    *Particle\w = 2
+    *Particle\h = 2
+    *Particle\Vx = Random(50, 25) * Cos(Radian(StartAngleY))
+    *Particle\Vy = 100 * Sin(Radian(StartAngleY))
+    StartAngleY + StepAngleY
+    *Particle\Sprite = SparklesParticlesSprites(0)
+    *Particle\Transparency = 255
+    *Particle\Active = #True
+    *Particle\Time = 800 / 1000;in ms
+    *Particle\CurrentTime = *Particle\Time
+    *Particle\Update = @UpdateQuickSparkleParticle()
+  Next
+  
+  *Emitter\CurrentTime - Elapsed
+  If *Emitter\CurrentTime <= 0
+    *Emitter\Active = #False
+  EndIf
+  
+EndProcedure
+
 Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
   If *PLayField\State <> #ScoringCompletedLines
     ProcedureReturn
@@ -1600,9 +1675,9 @@ Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
   
   If CurrentColumn > -1
     ;TODO: emitt some particles for each column
-    ;Protected EmitterX.f = *PLayField\x + CurrentColumn * Piece_Width + Piece_Width / 2
-    ;Protected EmitterY.f = *PLayField\y + CurrentLine * Piece_Height
-    ;GetEmitter(EmitterX, EmitterY, -90, -90, 5, 0.6, 
+    Protected EmitterX.f = *PLayField\x + CurrentColumn * Piece_Width + Piece_Width / 2
+    Protected EmitterY.f = *PLayField\y + CurrentLine * Piece_Height + Piece_Height / 2
+    GetEmitter(EmitterX, EmitterY, -90, -90, Random(10, 5), 1 / 1000, @EmitterUpdateScore())
     ;we gona clear this column on the playfield this frame
     ;we go from right to left
     *PLayField\PlayField(CurrentColumn, CurrentLine) = #Empty
@@ -1934,8 +2009,6 @@ Procedure Update(Elapsed.f)
         PlayFields(PlayerID - 1)\State = #GameOver
       Next
     EndIf
-    
-    
   EndIf
   
   If GameState\CurrentGameState = #Playing
