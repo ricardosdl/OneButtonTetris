@@ -208,6 +208,7 @@ Structure TEmitter
   y.f
   AngleX.f;in degrees
   AngleY.f;in degrees
+  NumParticles.u
   Active.a
   Time.f
   CurrentTime.f
@@ -233,7 +234,7 @@ Global Dim SparklesParticles.TParticle(#Max_Particles - 1), Dim SparklesParticle
 Global NewList Emitters.TEmitter()
 
 
-Procedure.i GetEmitter(x.f, y.f, AngleX.f, AngleY.f, Time.f, UpdateProc.UpdateEmitterProc)
+Procedure.i GetEmitter(x.f, y.f, AngleX.f, AngleY.f, NumParticles.u, Time.f, UpdateProc.UpdateEmitterProc)
   Protected *Emitter.TEmitter = #Null
   ForEach Emitters()
     If Not Emitters()\Active
@@ -250,6 +251,7 @@ Procedure.i GetEmitter(x.f, y.f, AngleX.f, AngleY.f, Time.f, UpdateProc.UpdateEm
   *Emitter\y = y
   *Emitter\AngleX = AngleX
   *Emitter\AngleY = AngleY
+  *Emitter\NumParticles = NumParticles
   *Emitter\Active = #True
   *Emitter\Time = Time
   *Emitter\CurrentTime = Time
@@ -314,7 +316,7 @@ Procedure UpdateQuickSparkleParticle(*Particle.TParticle, Elapsed.f)
 EndProcedure
 
 Procedure EmitterQuickSparklesUpdate(*Emitter.TEmitter, Elapsed.f)
-  Protected NumParticles.a = Random(15, 10), i.a = 0
+  Protected NumParticles.a = *Emitter\NumParticles, i.a = 0
   Protected StartAngleY.f = *Emitter\AngleY - 45
   Protected FinalAngleY.f = *Emitter\AngleY + 45
   Protected StepAngleY.f = (FinalAngleY - StartAngleY) / NumParticles
@@ -323,21 +325,6 @@ Procedure EmitterQuickSparklesUpdate(*Emitter.TEmitter, Elapsed.f)
     If *Particle = #Null
       Continue
     EndIf
-;     x.f;position x
-;     y.f;postion y
-;     w.f;width
-;     h.f;height
-;     Vx.f;velocity x
-;     Vy.f;velocity y
-;     Sprite.i;the sprite that will be displayed
-;     Transparency.a
-;     Active.a;#true of active #false if not
-;     Time.f  ;how much time this particle will be alive in seconds
-;     CurrentTime.f;if > 0 the particle is active or alive
-;     Update.UpdateParticleProc
-;     Draw.UpdateParticleProc
-    
-    
     
     *Particle\x = *Emitter\x
     *Particle\y = *Emitter\y
@@ -1448,7 +1435,7 @@ Procedure UpdateFallingPieceWheel(*PlayField.TPlayField, Elapsed.f)
     Protected Line.a = *FallingPieceWheel\PieceType / #FallingPieceWheel_Pieces_Per_Line
     Protected PosX.f = *PlayField\x + *PlayField\Width + 10 + Column * (#Piece_Size * Piece_Width + 10)
     Protected PosY.f = *PlayField\y + 30 + Line * (#Piece_Size * Piece_Height + 10)
-    GetEmitter(PosX, PosY, 0, 0, 500 / 1000, @EmitterQuickSparklesUpdate())
+    GetEmitter(PosX, PosY, 0, 0, Random(15, 10), 500 / 1000, @EmitterQuickSparklesUpdate())
     PlaySoundEffect(#SelectSound)
   EndIf
   
@@ -1491,7 +1478,7 @@ Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
     ChooseCurrentPosition(*PlayField)
     Protected PosX.f = *PLayField\x + *FallingPiecePosition\Column * Piece_Width
     Protected PosY.f = *PlayField\y
-    GetEmitter(PosX, PosY, 45, 0, 1 / 1000, @EmitterQuickSparklesUpdate())
+    GetEmitter(PosX, PosY, 45, 0, Random(15, 10), 1 / 1000, @EmitterQuickSparklesUpdate())
     PlaySoundEffect(#SelectSound)
   EndIf
   
