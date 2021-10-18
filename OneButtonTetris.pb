@@ -156,8 +156,9 @@ Structure TGameState
   CurrentGameState.a
   OldGameState.a
   MinTimeGameOver.f
-  MultiplayerWinnerPlayerID.a
   PlayfieldsRanking.TPlayfieldsRanking
+  *MultiplayerWinnerEmitterLeft
+  *MultiplayerWinnerEmitterRight
 EndStructure
 
 Structure TPlayField
@@ -212,6 +213,8 @@ Structure TEmitter
   Active.a
   Time.f
   CurrentTime.f
+  EmissionTimer.f
+  CurrentEmissionTimer.f
   Update.UpdateEmitterProc
 EndStructure
 
@@ -234,7 +237,7 @@ Global Dim SparklesParticles.TParticle(#Max_Particles - 1), Dim SparklesParticle
 Global NewList Emitters.TEmitter()
 
 
-Procedure.i GetEmitter(x.f, y.f, AngleX.f, AngleY.f, NumParticles.u, Time.f, UpdateProc.UpdateEmitterProc)
+Procedure.i GetEmitter(x.f, y.f, AngleX.f, AngleY.f, NumParticles.u, EmissionTimer.f, Time.f, UpdateProc.UpdateEmitterProc)
   Protected *Emitter.TEmitter = #Null
   ForEach Emitters()
     If Not Emitters()\Active
@@ -253,11 +256,20 @@ Procedure.i GetEmitter(x.f, y.f, AngleX.f, AngleY.f, NumParticles.u, Time.f, Upd
   *Emitter\AngleY = AngleY
   *Emitter\NumParticles = NumParticles
   *Emitter\Active = #True
+  *Emitter\EmissionTimer = EmissionTimer
+  *Emitter\CurrentEmissionTimer = 0
   *Emitter\Time = Time
   *Emitter\CurrentTime = Time
   *Emitter\Update = UpdateProc
   
   ProcedureReturn *Emitter
+EndProcedure
+
+Procedure DeactivateAllEmitters()
+  ForEach Emitters()
+    Emitters()\Active = #False
+  Next
+  
 EndProcedure
 
 Procedure.i GetSparkleParticle()
@@ -269,6 +281,15 @@ Procedure.i GetSparkleParticle()
   Next
   
   ProcedureReturn #Null
+  
+EndProcedure
+
+Procedure DeactivateAllSparklesParticles()
+  Protected LastIndex.u = ArraySize(SparklesParticles())
+  Protected i.u = 0
+  For i = 0 To LastIndex
+    SparklesParticles(i)\Active = #False
+  Next
   
 EndProcedure
 
@@ -1203,6 +1224,17 @@ Procedure DrawMultiplayerGameOver()
     RankTextY = (WinnerTextY + WinnerCharHeight + 10) + ((i - 1) * (PlayerCharHeight + 10))
     DrawBitmapText(RankTextX, RankTextY, RankText, PlayerCharWidth, PlayerCharHeight)
     
+    If i = 1
+      Protected *EmitterLeft.TEmitter = GameState\MultiplayerWinnerEmitterLeft
+      Protected *EmitterRight.TEmitter = GameState\MultiplayerWinnerEmitterRight
+      *EmitterLeft\x = RankTextX
+      *EmitterLeft\y = RankTextY
+      
+      *EmitterRight\x = RankTextX + (RankTextNumChars * PlayerCharWidth) - 10
+      *EmitterRight\y = RankTextY
+    EndIf
+    
+    
     i + 1
   Next
   
@@ -1435,7 +1467,7 @@ Procedure UpdateFallingPieceWheel(*PlayField.TPlayField, Elapsed.f)
     Protected Line.a = *FallingPieceWheel\PieceType / #FallingPieceWheel_Pieces_Per_Line
     Protected PosX.f = *PlayField\x + *PlayField\Width + 10 + Column * (#Piece_Size * Piece_Width + 10)
     Protected PosY.f = *PlayField\y + 30 + Line * (#Piece_Size * Piece_Height + 10)
-    GetEmitter(PosX, PosY, 0, 0, Random(15, 10), 1 / 1000, @EmitterQuickSparklesUpdate())
+    GetEmitter(PosX, PosY, 0, 0, Random(15, 10), 0, 1 / 1000, @EmitterQuickSparklesUpdate())
     PlaySoundEffect(#SelectSound)
   EndIf
   
@@ -1478,7 +1510,7 @@ Procedure UpdateFallingPiecePosition(*PlayField.TPlayField, Elapsed.f)
     ChooseCurrentPosition(*PlayField)
     Protected PosX.f = *PLayField\x + *FallingPiecePosition\Column * Piece_Width
     Protected PosY.f = *PlayField\y
-    GetEmitter(PosX, PosY, 45, 0, Random(15, 10), 1 / 1000, @EmitterQuickSparklesUpdate())
+    GetEmitter(PosX, PosY, 45, 0, Random(15, 10), 0, 1 / 1000, @EmitterQuickSparklesUpdate())
     PlaySoundEffect(#SelectSound)
   EndIf
   
@@ -1677,7 +1709,7 @@ Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
     ;TODO: emitt some particles for each column
     Protected EmitterX.f = *PLayField\x + CurrentColumn * Piece_Width + Piece_Width / 2
     Protected EmitterY.f = *PLayField\y + CurrentLine * Piece_Height + Piece_Height / 2
-    GetEmitter(EmitterX, EmitterY, -90, -90, Random(10, 5), 1 / 1000, @EmitterUpdateScore())
+    GetEmitter(EmitterX, EmitterY, -90, -90, Random(10, 5), 0, 1 / 1000, @EmitterUpdateScore())
     ;we gona clear this column on the playfield this frame
     ;we go from right to left
     *PLayField\PlayField(CurrentColumn, CurrentLine) = #Empty
@@ -1700,13 +1732,42 @@ Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
   EndIf
 EndProcedure
 
+Procedure UpdateEmitterWinner(*Emitter.TEmitter, Elapsed.f)
+  *Emitter\CurrentEmissionTimer + Elapsed
+  If *Emitter\CurrentEmissionTimer > *Emitter\EmissionTimer
+    ;time to spawn some particles
+    Protected *Particle.TParticle = GetSparkleParticle()
+    *Particle\x = *Emitter\x
+    *Particle\y = *Emitter\y
+    *Particle\w = 1
+    *Particle\h = 1
+    *Particle\Vx = Random(100, 25) * Cos(Radian(*Emitter\AngleX))
+    *Particle\Vy = Random(100, 50)
+    *Particle\Sprite = SparklesParticlesSprites(0)
+    *Particle\Transparency = 255
+    *Particle\Active = #True
+    *Particle\Time = 500 / 1000;in seconds
+    *Particle\CurrentTime = *Particle\Time
+    *Particle\Update = @UpdateQuickSparkleParticle()
+    
+    *Emitter\CurrentEmissionTimer = 0
+  EndIf
+  
+  
+  *Emitter\CurrentTime - Elapsed
+  If *Emitter\CurrentTime <= 0
+    *Emitter\Active = #False
+  EndIf
+EndProcedure
+
 Procedure ChangeGameState(*GameState.TGameState, NewGameState.a)
   *GameState\OldGameState = *GameState\CurrentGameState
   *GameState\CurrentGameState = NewGameState
   Select NewGameState
     Case #StartMenu
       StopSoundEffect(#MainMusic)
-      
+      DeactivateAllEmitters()
+      DeactivateAllSparklesParticles()
     Case #Playing
       If *GameState\OldGameState = #StartMenu
         ;starting a new game, play the music from the beginning
@@ -1735,6 +1796,8 @@ Procedure ChangeGameState(*GameState.TGameState, NewGameState.a)
       StopSoundEffect(#TimeUpSound)
       StopSoundEffect(#IdleSound)
       PlaySoundEffect(#WinnerSound)
+      *GameState\MultiplayerWinnerEmitterLeft = GetEmitter(0, 0, 180, 0, -1, 1/20, 60, @UpdateEmitterWinner())
+      *GameState\MultiplayerWinnerEmitterRight = GetEmitter(0, 0, 0, 0, -1, 1/20, 60, @UpdateEmitterWinner())
       *GameState\MinTimeGameOver = 3.0
       
   EndSelect
