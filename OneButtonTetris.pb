@@ -1902,11 +1902,14 @@ Procedure IncreasePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficul
 EndProcedure
 
 Procedure UpdatePlayfieldsDifficulty(*PlayfieldsDifficulty.TPlayfieldsDifficulty, Elapsed.f)
+  If *PlayfieldsDifficulty\CurrentDifficulty > *PlayfieldsDifficulty\MaxDifficulty
+    ProcedureReturn
+  EndIf
+  
   *PlayfieldsDifficulty\TimeUntilNextDifficulty - Elapsed
   If *PlayfieldsDifficulty\TimeUntilNextDifficulty <= 0
     *PlayfieldsDifficulty\TimeUntilNextDifficulty = #Time_Until_Next_Difficulty
     IncreasePlayfieldsDifficulty(*PlayfieldsDifficulty)
-    
     *PlayfieldsDifficulty\PlayingTimeUp = #False
     StopSoundEffect(#TimeUpSound)
     
