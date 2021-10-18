@@ -1435,7 +1435,7 @@ Procedure UpdateFallingPieceWheel(*PlayField.TPlayField, Elapsed.f)
     Protected Line.a = *FallingPieceWheel\PieceType / #FallingPieceWheel_Pieces_Per_Line
     Protected PosX.f = *PlayField\x + *PlayField\Width + 10 + Column * (#Piece_Size * Piece_Width + 10)
     Protected PosY.f = *PlayField\y + 30 + Line * (#Piece_Size * Piece_Height + 10)
-    GetEmitter(PosX, PosY, 0, 0, Random(15, 10), 500 / 1000, @EmitterQuickSparklesUpdate())
+    GetEmitter(PosX, PosY, 0, 0, Random(15, 10), 1 / 1000, @EmitterQuickSparklesUpdate())
     PlaySoundEffect(#SelectSound)
   EndIf
   
@@ -1599,6 +1599,10 @@ Procedure UpdateScoringCompletedLines(*PLayField.TPlayField, Elapsed.f)
   Protected CurrentColumn.b = *PLayField\CompletedLines\CurrentColumn
   
   If CurrentColumn > -1
+    ;TODO: emitt some particles for each column
+    ;Protected EmitterX.f = *PLayField\x + CurrentColumn * Piece_Width + Piece_Width / 2
+    ;Protected EmitterY.f = *PLayField\y + CurrentLine * Piece_Height
+    ;GetEmitter(EmitterX, EmitterY, -90, -90, 5, 0.6, 
     ;we gona clear this column on the playfield this frame
     ;we go from right to left
     *PLayField\PlayField(CurrentColumn, CurrentLine) = #Empty
