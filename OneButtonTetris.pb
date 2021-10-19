@@ -230,7 +230,8 @@ Global PlayfieldOutlineSprite.i
 Global Dim PiecesSprites(#Right4);the sprites used to draw the playfield and falling piece
 Global StartMenu.TStartMenu, Bitmap_Font_Sprite.i
 Global SoundInitiated.a = #False, VolumeMusic.a = 100, VolumeSoundEffects.a = 50
-Global ControlReleased, SpaceKeyReleased.i, BackspaceReleased.i, DownKeyReleased.i, PKeyReleased.i = #False
+Global ControlReleased, SpaceKeyReleased.i, BackspaceReleased.i, DownKeyReleased.i,
+       PKeyReleased.i = #False, EKeyReleased.i = #False
 Global Dim SparklesParticles.TParticle(#Max_Particles - 1), Dim SparklesParticlesSprites(#Num_Sparkles_Particles_Sprites - 1)
 Global NewList Emitters.TEmitter()
 
@@ -1138,6 +1139,14 @@ Procedure DrawPauseMenu()
   PausedX = (ScreenWidth() - (PausedTextNumChars * 16)) / 2
   PausedY = 200
   DrawBitmapText(PausedX, PausedY, PausedText)
+  
+  Protected EndGameText.s = "Press E to end game now"
+  Protected EndGameTextNumChars.u = Len(EndGameText)
+  Protected EndX.f, EndY.f
+  EndX = (ScreenWidth() - (EndGameTextNumChars * 16)) / 2
+  EndY = PausedY + 24 + 10
+  DrawBitmapText(EndX, EndY, EndGameText)
+  
 EndProcedure
 
 Procedure DrawSinglePlayerGameOver()
@@ -1463,6 +1472,7 @@ Procedure CheckKeys()
   BackspaceReleased = KeyboardReleased(#PB_Key_Back)
   DownKeyReleased = KeyboardReleased(#PB_Key_Down)
   PKeyReleased = KeyboardReleased(#PB_Key_P)
+  EKeyReleased = KeyboardReleased(#PB_Key_E)
 EndProcedure
 
 Procedure ChooseCurrentPosition(*PlayField.TPlayField)
@@ -1895,6 +1905,16 @@ Procedure UpdatePauseMenu(Elapsed.f)
   If PKeyReleased
     ChangeGameState(@GameState, #Playing)
   EndIf
+  If EKeyReleased
+    ;end the current game by setting all playfields as game over
+    Protected i.a
+    For i = 1 To NumPlayers
+      PlayFields(i - 1)\State = #GameOver
+    Next
+    ;unpause the game
+    ChangeGameState(@GameState, #Playing)
+  EndIf
+  
 EndProcedure
 
 Procedure PausePlayingGame()
