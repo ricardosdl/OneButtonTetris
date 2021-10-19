@@ -685,28 +685,6 @@ Procedure CreateFallingPiecePositionSprite()
   FallingPiecePositionSprite = Sprite
 EndProcedure
 
-Procedure.i GetPieceTypeColorRGB(PieceType.a)
-  Select PieceType
-    Case #Line
-      ProcedureReturn RGB(255, 0, 0)
-    Case #Square
-      ProcedureReturn RGB(0, 0, 255)
-    Case #LeftL
-      ProcedureReturn RGB(255, 255, 0)
-    Case #RightL
-      ProcedureReturn RGB(Red(#Magenta), Green(#Magenta), Blue(#Magenta))
-    Case #Left4
-      ProcedureReturn RGB(Red(#Cyan), Green(#Cyan), Blue(#Cyan))
-    Case #Tee
-      ProcedureReturn RGB(0, 255, 0)
-    Case #Right4
-      ProcedureReturn RGB($FF, $66, $00)
-    Default
-      ProcedureReturn #Black
-  EndSelect
-  
-EndProcedure
-
 Procedure.i GetPieceTypeColorRGBA(PieceType.a)
   Select PieceType
     Case #Line
