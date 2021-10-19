@@ -4,7 +4,7 @@
 #PlayFieldSize_Width = 10;pieces
 #PlayFieldSize_Height = 20;pieces
 #Piece_Size = 4
-#Piece_Templates = 19
+#Piece_Templates = 23
 #Initial_Fall_Time = 0.2
 ;#Falling_Piece_Wheel_Timer = 0.2
 #Intial_Falling_Piece_Wheel_Timer = 0.75;seconds
@@ -31,11 +31,12 @@ EnumerationBinary TPieceInfo
   #CyanColor
   #GreenColor
   #OrangeColor
+  #PurpleColor
 EndEnumeration
 ;the first two bits o the tpieceinfo are set to the empty or filled status, the seven
 ;after are used to set the color, with this mask we can extract the color set on the pieceinfo
 ;which is stored inside the Playfield array inside TPlayfield
-#Color_Mask = %111111100
+#Color_Mask = %1111111100
 
 Enumeration TPieceType
   #Line
@@ -45,8 +46,9 @@ Enumeration TPieceType
   #Left4
   #Tee
   #Right4
+  #Wiggle
 EndEnumeration
-#Num_Piece_Types = #Right4 + 1
+#Num_Piece_Types = #Wiggle + 1
 
 Enumeration TPlayfieldState
   #ChoosingFallingPiece
@@ -224,10 +226,10 @@ Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
 Global Piece_Width.w, Piece_Height.w
 Global Dim PlayFields.TPlayField(#Max_PlayFields - 1), PlayfieldsDifficulty.TPlayfieldsDifficulty
 Global GameState.TGameState, NumPlayers.a = 1
-Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
-Global Dim FallingPieceWheelSprites(#Right4), FallingPiecePositionSprite.i = #False
+Global Dim PiecesConfiguration.TPieceConfiguration(#Wiggle)
+Global Dim FallingPieceWheelSprites(#Wiggle), FallingPiecePositionSprite.i = #False
 Global PlayfieldOutlineSprite.i
-Global Dim PiecesSprites(#Right4);the sprites used to draw the playfield and falling piece
+Global Dim PiecesSprites(#Wiggle);the sprites used to draw the playfield and falling piece
 Global StartMenu.TStartMenu, Bitmap_Font_Sprite.i
 Global SoundInitiated.a = #False, VolumeMusic.a = 100, VolumeSoundEffects.a = 50
 Global ControlReleased, SpaceKeyReleased.i, BackspaceReleased.i, DownKeyReleased.i, PKeyReleased.i = #False
@@ -505,7 +507,7 @@ EndProcedure
 
 Procedure InitFallingPieceWheel(*FallingPieceWheel.TFallingPieceWheel)
   *FallingPieceWheel\CurrentTimer = 0
-  *FallingPieceWheel\PieceType = Random(#Right4, #Line)
+  *FallingPieceWheel\PieceType = Random(#Wiggle, #Line)
   *FallingPieceWheel\ChoosedPiece = #False
   *FallingPieceWheel\ChoosedPieceTimer = 0.0
 EndProcedure
@@ -685,28 +687,6 @@ Procedure CreateFallingPiecePositionSprite()
   FallingPiecePositionSprite = Sprite
 EndProcedure
 
-Procedure.i GetPieceTypeColorRGB(PieceType.a)
-  Select PieceType
-    Case #Line
-      ProcedureReturn RGB(255, 0, 0)
-    Case #Square
-      ProcedureReturn RGB(0, 0, 255)
-    Case #LeftL
-      ProcedureReturn RGB(255, 255, 0)
-    Case #RightL
-      ProcedureReturn RGB(Red(#Magenta), Green(#Magenta), Blue(#Magenta))
-    Case #Left4
-      ProcedureReturn RGB(Red(#Cyan), Green(#Cyan), Blue(#Cyan))
-    Case #Tee
-      ProcedureReturn RGB(0, 255, 0)
-    Case #Right4
-      ProcedureReturn RGB($FF, $66, $00)
-    Default
-      ProcedureReturn #Black
-  EndSelect
-  
-EndProcedure
-
 Procedure.i GetPieceTypeColorRGBA(PieceType.a)
   Select PieceType
     Case #Line
@@ -723,6 +703,8 @@ Procedure.i GetPieceTypeColorRGBA(PieceType.a)
       ProcedureReturn RGBA(0, 255, 0, 255)
     Case #Right4
       ProcedureReturn RGBA($FF, $66, $00, 255)
+    Case #Wiggle
+      ProcedureReturn RGBA($99, $99, $FF, 255)
     Default
       ProcedureReturn RGBA(Red(#Black), Green(#Black), Blue(#Black), 255)
   EndSelect
@@ -745,6 +727,8 @@ Procedure.i GetPieceSpriteByColor(Color.u)
       ProcedureReturn PiecesSprites(5)
     Case #OrangeColor
       ProcedureReturn PiecesSprites(6)
+    Case #PurpleColor
+      ProcedureReturn PiecesSprites(7)
     Default
       ProcedureReturn #False
   EndSelect
@@ -775,7 +759,7 @@ EndProcedure
 
 Procedure CreateFallingPieceWheelSprites()
   Protected PieceType.a
-  For PieceType = #Line To #Right4
+  For PieceType = #Line To #Wiggle
     If IsSprite(FallingPieceWheelSprites(PieceType))
       FreeSprite(FallingPieceWheelSprites(PieceType))
     EndIf
@@ -811,7 +795,7 @@ EndProcedure
 
 Procedure CreatePiecesSprites()
   Protected PieceType.a
-  For PieceType = #Line To #Right4
+  For PieceType = #Line To #Wiggle
     If IsSprite(PiecesSprites(PieceType))
       FreeSprite(PiecesSprites(PieceType))
     EndIf
@@ -935,6 +919,13 @@ Procedure LoadPiecesConfigurations()
   PiecesConfiguration(#Right4)\WidthInPieces = 3
   PiecesConfiguration(#Right4)\HeightInPieces = 2
   PiecesConfiguration(#Right4)\Color = #OrangeColor
+  
+  PiecesConfiguration(#Wiggle)\PieceType = #Wiggle
+  PiecesConfiguration(#Wiggle)\NumConfigurations = 4
+  StringListToAsciiList("19,20,21,22", PiecesConfiguration(#Wiggle)\PieceTemplates())
+  PiecesConfiguration(#Wiggle)\WidthInPieces = 4
+  PiecesConfiguration(#Wiggle)\HeightInPieces = 2
+  PiecesConfiguration(#Wiggle)\Color = #PurpleColor
 EndProcedure
 
 Procedure.q GetPieceColor(PieceInfo.u)
@@ -952,6 +943,8 @@ Procedure.q GetPieceColor(PieceInfo.u)
     ProcedureReturn #Green
   ElseIf PieceInfo & #OrangeColor
     ProcedureReturn RGB($FF, $66, $00)
+  ElseIf PieceInfo & #PurpleColor
+    ProcedureReturn RGB($99, $99, $FF)
   EndIf
   
   ProcedureReturn #Black
@@ -991,7 +984,7 @@ EndProcedure
 Procedure DrawFallingPieceWheel(*PlayField.TPlayField)
   Protected FallingPieceWheel.TFallingPieceWheel = *PlayField\FallingPieceWheel
   Protected CurrentPieceType.a, x.f, y.f
-  For CurrentPieceType = #Line To #Right4
+  For CurrentPieceType = #Line To #Wiggle
     Protected Column.a = CurrentPieceType % #FallingPieceWheel_Pieces_Per_Column
     Protected Line.a = CurrentPieceType / #FallingPieceWheel_Pieces_Per_Line
     x = *PlayField\x + *PlayField\Width + 10 + Column * (#Piece_Size * Piece_Width + 10)
@@ -1556,7 +1549,7 @@ Procedure BringPlayFieldOneLineUp(*Playfield.TPlayfield, StartLine.b)
 EndProcedure
 
 Procedure.u RandomColor()
-  Dim Colors.u(6)
+  Dim Colors.u(7)
   
   Colors(0) = #RedColor
   Colors(1) = #BlueColor
@@ -1565,8 +1558,9 @@ Procedure.u RandomColor()
   Colors(4) = #CyanColor
   Colors(5) = #GreenColor
   Colors(6) = #OrangeColor
+  Colors(7) = #PurpleColor
   
-  ProcedureReturn Colors(Random(6))
+  ProcedureReturn Colors(Random(7))
   
   
 EndProcedure
