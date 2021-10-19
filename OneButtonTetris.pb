@@ -222,8 +222,6 @@ Global ElapsedTimneInS.f, LastTimeInMs.q
 Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
 ;holds the current pieces widht and height (according to the number of players)
 Global Piece_Width.w, Piece_Height.w
-Global PlayField.TPlayField, FallingPiece.TFallingPiece, FallingPieceWheel.TFallingPieceWheel,
-       FallingPiecePosition.TFallingPiecePosition
 Global Dim PlayFields.TPlayField(#Max_PlayFields - 1), PlayfieldsDifficulty.TPlayfieldsDifficulty
 Global GameState.TGameState, NumPlayers.a = 1
 Global Dim PiecesConfiguration.TPieceConfiguration(#Right4)
