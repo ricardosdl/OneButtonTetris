@@ -916,27 +916,6 @@ Procedure LoadPiecesConfigurations()
   PiecesConfiguration(#Right4)\Color = #OrangeColor
 EndProcedure
 
-Procedure.q GetPieceColor(PieceInfo.u)
-  If PieceInfo & #RedColor
-    ProcedureReturn #Red
-  ElseIf PieceInfo & #BlueColor
-    ProcedureReturn #Blue
-  ElseIf PieceInfo & #YellowColor
-    ProcedureReturn #Yellow
-  ElseIf PieceInfo & #MagentaColor
-    ProcedureReturn #Magenta
-  ElseIf PieceInfo & #CyanColor
-    ProcedureReturn #Cyan
-  ElseIf PieceInfo & #GreenColor
-    ProcedureReturn #Green
-  ElseIf PieceInfo & #OrangeColor
-    ProcedureReturn RGB($FF, $66, $00)
-  EndIf
-  
-  ProcedureReturn #Black
-  
-EndProcedure
-
 Procedure.a IsCellWithinPlayField(CellX.w, CellY.w)
   ProcedureReturn Bool((CellX >= 0  And CellX < #PlayFieldSize_Width) And
                        (CellY >= 0 And CellY < #PlayFieldSize_Height))
