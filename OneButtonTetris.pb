@@ -218,7 +218,7 @@ Structure TEmitter
   Update.UpdateEmitterProc
 EndStructure
 
-Global ElapsedTimneInS.f, LastTimeInMs.q
+Global ElapsedTimneInS.f, LastTimeInMs.q, QuitGame.a = #False
 Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
 ;holds the current pieces widht and height (according to the number of players)
 Global Piece_Width.w, Piece_Height.w
@@ -231,7 +231,7 @@ Global Dim PiecesSprites(#Right4);the sprites used to draw the playfield and fal
 Global StartMenu.TStartMenu, Bitmap_Font_Sprite.i
 Global SoundInitiated.a = #False, VolumeMusic.a = 100, VolumeSoundEffects.a = 50
 Global ControlReleased, SpaceKeyReleased.i, BackspaceReleased.i, DownKeyReleased.i,
-       PKeyReleased.i = #False, EKeyReleased.i = #False
+       EscKeyReleased.i = #False, EKeyReleased.i = #False
 Global Dim SparklesParticles.TParticle(#Max_Particles - 1), Dim SparklesParticlesSprites(#Num_Sparkles_Particles_Sprites - 1)
 Global NewList Emitters.TEmitter()
 
@@ -1471,7 +1471,7 @@ Procedure CheckKeys()
   SpaceKeyReleased = KeyboardReleased(#PB_Key_Space)
   BackspaceReleased = KeyboardReleased(#PB_Key_Back)
   DownKeyReleased = KeyboardReleased(#PB_Key_Down)
-  PKeyReleased = KeyboardReleased(#PB_Key_P)
+  EscKeyReleased = KeyboardReleased(#PB_Key_Escape)
   EKeyReleased = KeyboardReleased(#PB_Key_E)
 EndProcedure
 
@@ -1902,7 +1902,7 @@ Procedure UpdateGameOverPlayFields(Elapsed.f)
 EndProcedure
 
 Procedure UpdatePauseMenu(Elapsed.f)
-  If PKeyReleased
+  If EscKeyReleased
     ChangeGameState(@GameState, #Playing)
   EndIf
   If EKeyReleased
@@ -2075,7 +2075,7 @@ Procedure Update(Elapsed.f)
   
   If GameState\CurrentGameState = #Playing
     CheckKeys()
-    If PKeyReleased
+    If EscKeyReleased
       PausePlayingGame()
       ProcedureReturn
     EndIf
@@ -2142,5 +2142,5 @@ Repeat
   
   
   FlipBuffers()
-Until event = #PB_Event_CloseWindow Or KeyboardPushed(#PB_Key_Escape)
+Until event = #PB_Event_CloseWindow Or (QuitGame = #True)
 End
