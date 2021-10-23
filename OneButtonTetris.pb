@@ -603,6 +603,7 @@ Procedure InitPlayField(*PlayField.TPlayField, PosX.f, PosY.f, PlayerID.a)
   *PlayField\ActionKey = GetPlayfieldActionKey(PlayerID)
   *PlayField\TimeSurvived = 0.0
   *PlayField\IdleTimer = 0.0
+  *PlayField\FallingPiece\IsFalling = #False
   ChangePlayFieldState(*PlayField, #ChoosingFallingPiecePosition)
   
 EndProcedure
