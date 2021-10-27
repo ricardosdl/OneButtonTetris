@@ -218,7 +218,7 @@ Structure TEmitter
   Update.UpdateEmitterProc
 EndStructure
 
-Global ElapsedTimneInS.f, LastTimeInMs.q, QuitGame.a = #False
+Global ElapsedTimneInS.f, LastTimeInMs.q, Event.i, QuitGame.a = #False
 Global Dim PieceTemplates.TPieceTemplate(#Piece_Templates - 1)
 ;holds the current pieces widht and height (according to the number of players)
 Global Piece_Width.w, Piece_Height.w
@@ -2088,6 +2088,16 @@ Procedure Update(Elapsed.f)
 
 EndProcedure
 
+Procedure ProcessEvent(Event)
+  If Event = 0
+    ProcedureReturn
+  EndIf
+  
+  If Event = #PB_Event_CloseWindow
+    QuitGame = #True
+  EndIf
+EndProcedure
+
 ;===================main program starts here================
 InitSprite()
 InitKeyboard()
@@ -2110,7 +2120,11 @@ Repeat
   ElapsedTimneInS = (ElapsedMilliseconds() - LastTimeInMs) / 1000.0
   LastTimeInMs = ElapsedMilliseconds()
   
-  Global event = WindowEvent()
+  ;process all window events
+  Repeat
+    Event = WindowEvent()
+    ProcessEvent(Event)
+  Until Event = 0
   
   ;Update
   ExamineKeyboard()
@@ -2122,5 +2136,5 @@ Repeat
   
   
   FlipBuffers()
-Until event = #PB_Event_CloseWindow Or (QuitGame = #True)
+Until QuitGame = #True
 End
