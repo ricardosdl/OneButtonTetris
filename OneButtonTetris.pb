@@ -628,7 +628,8 @@ Procedure SetupFallingPieceWheel(*FallingPieceWheel.TFallingPieceWheel, PosX.f, 
   
   If *FallingPieceWheel\CurrentPieceBackgroundSprite <> 0
     StartDrawing(SpriteOutput(*FallingPieceWheel\CurrentPieceBackgroundSprite))
-    Box(0, 0, #Piece_Size * Piece_Width, #Piece_Size * Piece_Height, RGB(255, 255, 255))
+    DrawingMode(#PB_2DDrawing_AlphaBlend)
+    Box(0, 0, #Piece_Size * Piece_Width, #Piece_Size * Piece_Height, RGBA(255, 255, 255, 255))
     StopDrawing()
   EndIf
   
@@ -745,6 +746,7 @@ Procedure CreateSparklesParticlesSprites()
     SparklesParticlesSprites(i) = CreateSprite(#PB_Any, 1, 1, #PB_Sprite_AlphaBlending)
     If SparklesParticlesSprites(i) <> 0
       StartDrawing(SpriteOutput(SparklesParticlesSprites(i)))
+      DrawingMode(#PB_2DDrawing_AlphaBlend)
       Box(0, 0, 1, 1, SpritesColors(i))
       StopDrawing()
     EndIf
